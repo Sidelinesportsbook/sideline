@@ -333,9 +333,8 @@ h2{letter-spacing:1.2px}
 <footer><button class="fblink" data-fb="1">Send feedback or report a bug</button><br>Play money only. No real money is used or can be won, and bets can't be undone once placed. Prices marked "PointsBet line" are PointsBet (AU) odds and "DraftKings line" are DraftKings odds via ESPN, both as published when the data was synced; every other price is modelled from ESPN's win projections and real player averages. NBA rosters, contracts, injuries and stats come from ESPN for the 2026-27 season. Premier League and Champions League player numbers are real ESPN per-game averages for this season. A leg on a player who is ruled out or doesn't play is voided.</footer>
 <div class="bnav"><button data-pg="bets" id="bb">Home</button><button data-pg="slip" id="bs">Slip<i id="bn"></i></button><button data-pg="mb" id="bm">Bets<i id="bm2"></i></button><button data-pg="pf" id="bp">Profile</button></div>
 
-<script id="bld" type="text/plain">ede27e57bb27</script>
+<script id="bld" type="text/plain">8a740233b3a3</script>
 <script id="chg" type="application/json">[
- {"d":"2026-10-24","t":"Markets now show only real bookmaker lines and prices (PointsBet and DraftKings), including their actual alternate lines. Anything not priced yet shows as not released."},
  {"d":"2026-10-24","t":"Fixed: cashed-out multis now show each leg's final stat with HIT or MISS (they stayed PENDING before). The cash-out amount is unchanged."},
  {"d":"2026-10-24","t":"Fixed: your bet slip is now saved when you leave, finished games never show LIVE (legs show the final figure with HIT or MISS), and older open bets settle on the real final."},
  {"d":"2026-10-24","t":"Fixed: cash-outs now have their own count in your profile record instead of being counted as void."},
@@ -1290,7 +1289,7 @@ function logView(rows,cols,sel,ln,hdr,sub){const c=cols.find(x=>x.k===sel)||cols
 let NAV=[];
 const sheetWrap=(n,inner)=>`<div class="mod sheet" id="pso"><div class="mc ps" role="dialog" aria-label="${esc(n)}"><button class="x cls" data-psx="1" aria-label="Close">×</button>${NAV.length?`<button class="back sbk" data-sback="1">‹ Back to ${esc(NAV[NAV.length-1].n)}</button>`:""}${inner}</div></div>`;
 const nextBtn=g=>g?`<button class="nxt" data-open="${g.id}"><span><small>Next game</small><b>${esc(g.a)} @ ${esc(g.h)}</b><small>${fmt(g.ts)}</small></span><span class="more">Bet on this game ›</span></button>`:"";
-const lineCards=(pl,g,sts)=>`<h2>Bookmaker lines for the next game</h2><div class="pl3">${sts.map(st=>{const i=PLY.indexOf(pl),m=mu(pl,st,g),ln=st==="g"?.5:lnOf(st,m),x=st==="g"?pleg(i,"g","k",1,g.id):pleg(i,st,"o",ln,g.id);return`<button class="sc lc${SHEET.st===st?" on":""}" data-pst="${st}"><small>${SL[st]}</small>${x.na?`<b class="tm">Not released</b><small>No bookmaker line yet · projection ${m.toFixed(st==="tpm"||st==="sot"||st==="g"?2:1)}</small>`:`<b>${st==="g"?"Anytime":"Over "+ln}</b><small>${f2(x.odds)} · ${esc(x.src||"")} · projection ${m.toFixed(st==="tpm"||st==="sot"||st==="g"?2:1)}</small>`}</button>`}).join("")}</div>`;
+const lineCards=(pl,g,sts)=>`<h2>Lines for the next game</h2><div class="pl3">${sts.map(st=>{const i=PLY.indexOf(pl),m=mu(pl,st,g),ln=st==="g"?.5:lnOf(st,m),x=st==="g"?pleg(i,"g","k",1,g.id):pleg(i,st,"o",ln,g.id);return`<button class="sc lc${SHEET.st===st?" on":""}" data-pst="${st}"><small>${SL[st]}</small><b>${st==="g"?"Anytime":"Over "+ln}</b><small>${f2(x.odds)}${x.src?" · PointsBet":""} · proj ${m.toFixed(st==="tpm"||st==="sot"||st==="g"?2:1)}</small></button>`}).join("")}</div>`;
 
 const NBC=[{k:"pts",lab:"PTS",i:5},{k:"reb",lab:"REB",i:6},{k:"ast",lab:"AST",i:7},{k:"tpm",lab:"3PM",i:8},{k:"pra",lab:"PRA",f:r=>+r[5]+ +r[6]+ +r[7]}];
 function openNBA(n){const p=NBAP[n],tn=TM[p.t].n,g=gOf(tn),pl=PLY.find(x=>x.n===n&&x.tm===tn),rows=uniqLog(p.lg).filter(r=>nbaSeasonOf(r[0])===SEASON.current),st=SHEET.st=SHEET.st||"pts",ok=pl&&g;
@@ -1300,7 +1299,7 @@ function openNBA(n){const p=NBAP[n],tn=TM[p.t].n,g=gOf(tn),pl=PLY.find(x=>x.n===
  <div class="chips2"><span class="chip ${p.inj?"c-lost":"c-won"}">${p.inj?esc(p.inj)+(p.injt?" · "+esc(p.injt):""):"Active"}</span></div>${nextBtn(g)}
  ${ok?lineCards(pl,g,["pts","reb","ast","tpm","pra"].filter(s=>hasS(pl,s)))+propHits(pl,g,rows,NBC,["pts","reb","ast","tpm","pra"].filter(s=>hasS(pl,s))):`<div class="tm" style="margin-top:12px">No betting lines for ${esc(n)}: ${!p.c27?"no games played this season":!g?"no upcoming game":"not enough minutes this season"}.</div>`}
  <h2>${SEASON.current} season averages</h2>${p.c27?gbRow([["GP",p.c27.gp],["MIN",f1(p.c27.min)],["PTS",f1(p.c27.pts)],["REB",f1(p.c27.reb)],["AST",f1(p.c27.ast)],["3PM",f1(p.c27.tpm)],["STL",f1(p.c27.stl)],["BLK",f1(p.c27.blk)],["TO",f1(p.c27.to)],["FG%",p.c27.fgp!=null?f1(p.c27.fgp):null],["3P%",p.c27.tpp!=null?f1(p.c27.tpp):null],["FT%",p.c27.ftp!=null?f1(p.c27.ftp):null]]):'<div class="cempty" style="height:64px">No games played this season</div>'}
- ${rows.length?gbView(rows,NBC,st,ln,[{k:"min",lab:"MIN",i:4},...NBC,{k:"stl",lab:"STL",i:9},{k:"blk",lab:"BLK",i:10},{k:"to",lab:"TO",i:11},{k:"fg",lab:"FG",f:r=>r[12]!=null&&r[13]!=null?r[12]+"-"+r[13]:""},{k:"3p",lab:"3PT",f:r=>r[14]!=null?r[8]+"-"+r[14]:""},{k:"ft",lab:"FT",f:r=>r[15]!=null&&r[16]!=null?r[15]+"-"+r[16]:""}],{sub:SEASON.current+" regular season · game by game",proj:!BKP[(pl||{}).n+"|"+st],mx:r=>r[17]?` class="mxr" data-mx="${esc(r[17])}" data-mp="basketball/nba" data-ms="nba" title="Open match centre"`:""}):`<h2>Game by game</h2><div class="cempty">No games played this season yet.</div>`}
+ ${rows.length?gbView(rows,NBC,st,ln,[{k:"min",lab:"MIN",i:4},...NBC,{k:"stl",lab:"STL",i:9},{k:"blk",lab:"BLK",i:10},{k:"to",lab:"TO",i:11},{k:"fg",lab:"FG",f:r=>r[12]!=null&&r[13]!=null?r[12]+"-"+r[13]:""},{k:"3p",lab:"3PT",f:r=>r[14]!=null?r[8]+"-"+r[14]:""},{k:"ft",lab:"FT",f:r=>r[15]!=null&&r[16]!=null?r[15]+"-"+r[16]:""}],{sub:SEASON.current+" regular season · game by game",mx:r=>r[17]?` class="mxr" data-mx="${esc(r[17])}" data-mp="basketball/nba" data-ms="nba" title="Open match centre"`:""}):`<h2>Game by game</h2><div class="cempty">No games played this season yet.</div>`}
  ${upcoming((TMD.nba[p.t]||{}).fx,"nba")}${p.h&&p.h.length?`<h2>Team history</h2><div>${stints(p.h).map(s=>`<div class="kv"><span style="display:flex;align-items:center;gap:8px">${bd(abTeam(s.t),24)}<b>${esc(abTeam(s.t))}</b></span><span class="tm">${s.from===s.to?s.from:s.from+" to "+s.to} · ${s.gp} games</span></div>`).join("")}</div>`:""}
  ${srcNote("ESPN, NBA regular season")}`)}
 
@@ -1547,7 +1546,7 @@ const gbStats=vs=>{const v=vs.filter(x=>x!=null);if(!v.length)return"";const s=v
 function gbView(rows,cols,sel,ln,hdr,o){o=o||{};const c=cols.find(x=>x.k===sel)||cols[0],val=r=>{const x=c.f?c.f(r):r[c.i];return x===""||x==null||isNaN(+x)?null:+x};
  const f=SHEET.gf||"all",fr=gbFilter(rows,f),gs=fr.slice().reverse().map(r=>({t:Date.parse(r[0]+"T12:00Z"),opp:r[1],short:r[1],ha:r[2],res:r[3],v:val(r)}));
  const rate=rs=>{const v=rs.map(val).filter(x=>x!=null),h=v.filter(x=>ln!=null&&x>ln).length;return{n:v.length,h,p:v.length?Math.round(h/v.length*100):0}},a=rate(fr),all=rate(rows);
- const title=ln!=null?(o.proj?`${c.lab} · projection ${ln}`:`${c.lab} · Over ${ln} · PointsBet line`):c.lab,cls=a.p>=55?"won":a.p<45?"lost":"";
+ const title=ln!=null?`${c.lab} · Over ${ln}`:c.lab,cls=a.p>=55?"won":a.p<45?"lost":"";
  const head=gbHead(title,o.sub||"Game by game",ln!=null&&a.n?a.p+"%":null,`${a.h} of ${a.n} hit${f!=="all"?` · season ${all.h}/${all.n}`:""}`,cls);
  const tabs=`<div class="pst gbt">${cols.map(x=>`<button data-pst="${x.k}" class="${x.k===c.k?"on":""}">${x.lab}</button>`).join("")}</div>`;
  const fil=`<div class="gbf">${GF.map(([k,l])=>`<button data-gf="${k}" class="${f===k?"on":""}">${l}${k==="all"?" ("+rows.length+")":""}</button>`).join("")}</div>`;
@@ -1751,8 +1750,8 @@ function plName(n,id){return plById(id)||(NBAP[n]||SOCP[n]?n:null)}
 function propHits(pl,g,rows,cols,sts){if(!pl||!g||!rows.length)return"";const out=sts.map(st=>{const c=cols.find(x=>x.k===st);if(!c)return null;const m=mu(pl,st,g),ln=st==="g"?.5:lnOf(st,m),v=r=>{const x=c.f?c.f(r):r[c.i];return x===""||x==null||isNaN(+x)?null:+x};
   const rate=rs=>{const vs=rs.map(v).filter(x=>x!=null);return vs.length?[vs.filter(x=>x>ln).length,vs.length]:null},cell=x=>x?`<td class="${x[0]/x[1]>=.5?"ov":"un"}"><b>${x[0]}/${x[1]}</b> <small>${Math.round(x[0]/x[1]*100)}%</small></td>`:"<td>–</td>";
   const all=rows.map(v).filter(x=>x!=null),avg=all.length?all.reduce((a,b)=>a+b,0)/all.length:null;
-  return`<tr><td><button class="pnm" data-pst="${st}">${esc(SL[st]||c.lab)}</button></td><td>${st==="g"?"Anytime":"Over "+ln}${st!=="g"&&!BKP[pl.n+"|"+st]?' <small class="tm">projection</small>':""}</td>${cell(rate(rows.slice(0,5)))}${cell(rate(rows.slice(0,10)))}${cell(rate(rows))}<td>${avg==null?"–":f1(avg)}</td></tr>`}).filter(Boolean);
- return out.length?`<h2>Hit rates against the next game's lines</h2><div class="tw"><table class="tb phr"><thead><tr><th>Market</th><th>Line</th><th>L5</th><th>L10</th><th>Season</th><th>Avg</th></tr></thead><tbody>${out.join("")}</tbody></table></div>`:""}
+  return`<tr><td><button class="pnm" data-pst="${st}">${esc(SL[st]||c.lab)}</button></td><td>${st==="g"?"Anytime":"Over "+ln}</td>${cell(rate(rows.slice(0,5)))}${cell(rate(rows.slice(0,10)))}${cell(rate(rows))}<td>${avg==null?"–":f1(avg)}</td></tr>`}).filter(Boolean);
+ return out.length?`<h2>Hit rates for the next game's lines</h2><div class="tw"><table class="tb phr"><thead><tr><th>Market</th><th>Line</th><th>L5</th><th>L10</th><th>Season</th><th>Avg</th></tr></thead><tbody>${out.join("")}</tbody></table></div>`:""}
 function upcoming(fx,sp){return fx&&fx.length?`<h2>Upcoming games</h2>${fixRows(fx.slice(0,3),sp)}`:""}
 
 /* ---------- live games, player photos and form in the betting area ----------
@@ -1797,8 +1796,8 @@ function formStrip(n,st,line,oo,uo){const p=NBAP[n],s=!p&&SOCP[n];const rows=p?u
 const _renderDetail1=renderDetail;renderDetail=function(){_renderDetail1();const g=GM[view];if(!g||!SL[dtab]||dtab==="main")return;
  document.querySelectorAll("#games .card").forEach(c=>{const pn=c.querySelector(".pn"),b=pn&&pn.querySelector(".pnm[data-ply]");if(!b||pn.dataset.pf)return;pn.dataset.pf=1;const n=b.dataset.ply,P=PLY.find(x=>x.n===n);
   const crest=pn.querySelector(".tlg,svg.lg");if(crest)crest.outerHTML=`<button class="pavb" data-ply="${esc(n)}" aria-label="Open ${esc(n)}'s profile">${avatar(n,null,null,44)}${P?`<span class="pavt">${bd(P.tm,18)}</span>`:""}</button>`;
-  const bk=BKP[n+"|"+dtab],line=bk?bk[0]:null,oo=bk?r2(am(bk[1])):0,uo=bk?r2(am(bk[2])):0;   /* the bookmaker's own line and prices */
-  const st=c.querySelector(".tm[style]");const html=formStrip(n,dtab,line,oo,uo);if(html)(st||pn).insertAdjacentHTML("afterend",html)})};
+  const o=c.querySelector(`.o[data-st="${dtab}"][data-s="o"]`),u=c.querySelector(`.o[data-st="${dtab}"][data-s="u"]`),line=o?parseFloat(o.dataset.l):null,od=x=>x?parseFloat((x.querySelector("b")||{}).textContent):0;
+  const st=c.querySelector(".tm[style]");const html=formStrip(n,dtab,isNaN(line)?null:line,od(o),od(u));if(html)(st||pn).insertAdjacentHTML("afterend",html)})};
 /* the live match page refreshes its box score every 30 seconds while the game is in play */
 setInterval(()=>{if(!view||pg!=="bets"||document.hidden)return;const g=GM[view],m=evOf(g);if(!g||!m||m.state!=="in")return;liveRefresh(g,m)},3e4);
 
@@ -1847,89 +1846,6 @@ const _settleAll9=settleAll;settleAll=function(){_settleAll9();let ch=false;
  if(ch){slog("settle","leg results recorded on cashed-out bets");save()}};
 /* new selections carry the player's ESPN id, so they stay linked to the right player after trades or name changes */
 const _pleg9=pleg;pleg=function(...a){const x=_pleg9(...a);if(x&&x.pl&&!x.pid){const p=NBAP[x.pl]||SOCP[x.pl];if(p&&p.id)x.pid=String(p.id)}return x};
-
-/* ---------- verified markets only ----------
-   A selection is offered only when a bookmaker publishes it: DraftKings (main lines, via ESPN) or PointsBet (AU)
-   (main lines, alternate spreads and totals, team totals, double chance, both teams to score, player over/unders and
-   player alternate lines). Lines and prices are the bookmaker's own; nothing is filled in from the site's model.
-   Whatever no bookmaker has priced is shown as not released yet. Model figures (projections, live cash-out values)
-   stay on the page as analysis, labelled as such. */
-const STALE_HIDE=12*36e5,STALE_WARN=2*36e5;
-const pbAge=()=>PBD&&PBD.fetched?Date.now()-Date.parse(PBD.fetched):Infinity,dkAge=()=>Date.now()-Date.parse(DATA.synced);
-const half=x=>Math.abs(Math.abs(x%1)-.5)<1e-9;   /* only lines that cannot push (x.5), so settlement is a clean win or loss */
-function pbe(g){if(!g)return null;if(g.pbe!==undefined)return g.pbe;const soc=SP[g.sp]&&SP[g.sp].m==="soc";
- return g.pbe=(PBD.events||[]).find(e=>(soc?e.comp!=="nba":e.comp==="nba")&&Math.abs(Date.parse(e.iso)-g.ts)<6*36e5&&pteam(e.h,g.h)&&pteam(e.a,g.a))||null}
-function vTeam(g,m,s,l){const e=pbe(g),M=(e&&e.mk)||{},pbOK=pbAge()<STALE_HIDE,pb=x=>pbOK&&x>1?{odds:r2(x),src:"PointsBet"}:null;
- const mainOK=g.bk&&(g.src?pbOK:dkAge()<STALE_HIDE),src=g.src||"DraftKings",main=x=>mainOK&&x>1?{odds:r2(x),src}:null;
- if(m==="h")return main(s==="h"?g.oh:s==="a"?g.oa:g.od);
- if(m==="s"){const HL=l!==undefined?l:g.hl;if(g.hl!==undefined&&HL===g.hl&&g.sh){const v=main(s==="h"?g.sh:g.sa);if(v)return v}const x=(M.altsp||[]).find(r=>r[0]===HL);return x&&half(HL)?pb(s==="h"?x[1]:x[2]):null}
- if(m==="t"){const L=l!==undefined?l:g.t;if(L===g.t&&g.po){const v=main(s==="o"?g.po:g.pu);if(v)return v}const x=(M.alttot||[]).find(r=>r[0]===L);return x&&half(L)?pb(s==="o"?x[1]:x[2]):null}
- if(m==="tg"){const x=(M["tt"+s[0]]||[]).find(r=>r[0]===l);return x&&half(l)?pb(s[1]==="o"?x[1]:x[2]):null}
- if(m==="b")return M.btts?pb(s==="y"?M.btts[0]:M.btts[1]):null;
- if(m==="dc")return M.dc?pb(s==="1x"?M.dc[0]:s==="12"?M.dc[1]:M.dc[2]):null;
- return null}
-/* PointsBet sometimes shortens names ("G. Antetokounmpo"): accept initial + surname only when exactly one player on
-   the two teams fits, so a short name can never land on the wrong player */
-const shortK=n=>{const w=pnk(n).split(" ");return w.length>1?w[0][0]+" "+w[w.length-1]:w[0]};
-function pbKeyFor(e,n,g){if(!e||!e.pp)return null;if(e.pp[n])return n;const k=pnk(n),ex=Object.keys(e.pp).filter(x=>pnk(x)===k);if(ex.length===1)return ex[0];
- const sk=shortK(n),cand=Object.keys(e.pp).filter(x=>/^[a-z]\.?\s/i.test(x.trim())&&shortK(x.replace(/\./g," "))===sk);if(cand.length!==1)return null;
- const rivals=PLY.filter(p=>(p.tm===g.h||p.tm===g.a)&&shortK(p.n)===sk);return rivals.length===1?cand[0]:null}
-function pRow(g,n){const e=pbe(g),k=pbKeyFor(e,n,g);return k?e.pp[k]:null}
-/* fill in bookmaker over/unders and double/triple-doubles for players PointsBet lists under a short name */
-(G||[]).filter(g=>g.sp==="nba"&&!g.leg).forEach(g=>{const e=pbe(g);if(!e||!e.pp)return;PLY.filter(p=>p.tm===g.h||p.tm===g.a).forEach(p=>{const k=pbKeyFor(e,p.n,g);if(!k||k===p.n)return;const v=e.pp[k];
- ["pts","reb","ast","tpm","pra","pr","pa","ra"].forEach(st=>{const x=v[st];if(x&&x[1]&&x[2]&&!BKP[p.n+"|"+st])BKP[p.n+"|"+st]=[x[0],dec2am(x[1]),dec2am(x[2])]});if((v.dd||v.td)&&!PBDD[p.n])PBDD[p.n]={dd:v.dd,td:v.td}})});
-function vPlayer(p,g,st,s,l){if(!p||!g||pbAge()>STALE_HIDE)return null;const pb=x=>x>1?{odds:r2(x),src:"PointsBet"}:null;
- if(st==="dd"||st==="td")return s==="k"&&PBDD[p.n]&&PBDD[p.n][st]?pb(PBDD[p.n][st]):null;
- if(g.sp==="nba"){const bk=BKP[p.n+"|"+st];if((s==="o"||s==="u")&&bk&&bk[0]===l)return pb(am(s==="o"?bk[1]:bk[2]));
-  if(s==="k"){const r=pRow(g,p.n),lad=r&&r.lad&&r.lad[st];return lad&&lad[l]?pb(lad[l]):null}return null}
- if(st==="g"&&s==="k"&&l===2){const r=pbPx(g,p.n,"g","k",1)!=null&&g.pb&&g.pb.pp?(Object.entries(g.pb.pp).find(([k])=>pnorm(k).slice(-1)[0]===pnorm(p.n).slice(-1)[0])||[])[1]:null;return r&&r.g2?pb(r.g2):null}
- const px=pbPx(g,p.n,st,s,l);return px?pb(px):null}
-/* every price the site hands out goes through these: no verified price, no selection */
-const _legV=leg;leg=function(id,m,s,l){const x=_legV(id,m,s,l),g=GM[id];if(!g||!x)return x;const v=vTeam(g,m,s,m==="s"?(l!==undefined?l:g.hl):m==="t"?(l!==undefined?l:g.t):l);
- if(v){x.odds=v.odds;x.src=v.src;x.na=0}else{x.na=1;x.odds=0}return x};
-const _plegV=pleg;pleg=function(i,st,s,l,gid){const x=_plegV(i,st,s,l,gid),p=PLY[i],g=gid?GM[gid]:gOf(p.tm);const v=vPlayer(p,g,st,s,l);
- if(v){x.odds=v.odds;x.src=v.src;x.na=0}else{x.na=1;x.odds=0}return x};
-const _pbtV=pbt;pbt=function(i,st,s,l,lab){const g=GM[view],x=pleg(i,st,s,l,g&&g.id);return x&&!x.na?_pbtV(i,st,s,l,lab):""};
-const _btnV=btn;btn=function(id,m,s,dis,l){const x=leg(id,m,s,l);return x&&!x.na?_btnV(id,m,s,dis,l):""};
-/* team markets: the bookmaker's main lines, then its real alternates (spreads, totals, team totals, double chance) */
-mkts=function(g,dis,full){const soc=SP[g.sp].m==="soc",M=(pbe(g)||{}).mk||{},row=(lab,b)=>b?`<div class="mk"><span class="ml">${lab}</span><div class="bs">${b}</div></div>`:"";
- const B=(m,s,l)=>btn(g.id,m,s,dis,l),all=(...b)=>b.every(Boolean)?b.join(""):"";
- let h=row(soc?"Result":"Head to head",all(B("h","a"),...(soc?[B("h","d")]:[]),B("h","h")));
- h+=soc?row("Both teams to score",all(B("b","y"),B("b","n"))):row("Line",all(B("s","a"),B("s","h")));
- h+=row(soc?"Total goals":"Total",all(B("t","o"),B("t","u")));
- if(full){if(soc)h+=row("Double chance",all(B("dc","1x"),B("dc","x2"),B("dc","12")));
-  const near=(xs,c,n)=>xs.filter(x=>half(x[0])&&x[0]!==c).sort((a,b)=>Math.abs(a[0]-(c||0))-Math.abs(b[0]-(c||0))).slice(0,n).sort((a,b)=>a[0]-b[0]);
-  h+=near(M.altsp||[],g.hl,soc?6:8).map(x=>row(soc?"Handicap":"Alt line",all(B("s","a",x[0]),B("s","h",x[0])))).join("");
-  h+=near(M.alttot||[],g.t,8).map(x=>row((soc?"Goals ":"Points ")+x[0],all(B("t","o",x[0]),B("t","u",x[0])))).join("");
-  ["h","a"].forEach(k=>(M["tt"+k]||[]).filter(x=>half(x[0])).forEach(x=>{h+=row(sh(k==="h"?g.h:g.a)+(soc?" goals ":" total ")+x[0],all(B("tg",k+"o",x[0]),B("tg",k+"u",x[0])))}))}
- return h||`<div class="mk mna"><span class="ml">Markets</span><div class="tm">Not released yet · no bookmaker has priced this game</div></div>`};
-/* player markets on the game page: the bookmaker's over/under and its alternate lines, nothing else */
-function propMarkets(i,p,g,st){const soc=SP[g.sp].m==="soc",rows=[];
- const bk=g.sp==="nba"&&BKP[p.n+"|"+st];if(bk){const o=pbt(i,st,"o",bk[0],"Over "+bk[0]),u=pbt(i,st,"u",bk[0],"Under "+bk[0]);if(o&&u)rows.push(`<div class="mk"><span class="ml">Over / Under · PointsBet</span><div class="bs">${o}${u}</div></div>`)}
- let ks=[];if(st==="dd"||st==="td")ks=[1];else if(g.sp==="nba"){const r=pRow(g,p.n);ks=Object.keys((r&&r.lad&&r.lad[st])||{}).map(Number)}
- else if(st==="g")ks=[1,2];else if(st==="yc")ks=[1];else{const r=g.pb&&g.pb.pp?Object.entries(g.pb.pp).find(([k])=>pnorm(k).join(" ")===pnorm(p.n).join(" ")||pnorm(k).slice(-1)[0]===pnorm(p.n).slice(-1)[0]):null;ks=Object.keys((r&&r[1]&&r[1][st])||{}).map(Number)}
- const lad=ks.sort((a,b)=>a-b).map(k=>pbt(i,st,"k",k,rl(st,k))).filter(Boolean);
- if(lad.length)rows.push(`<div class="ml" style="margin:8px 0 4px">${NO[st]?SL[st]+" · PointsBet":"Alternate lines · PointsBet"}</div><div class="lad">${lad.join("")}</div>`);
- return rows.join("")}
-const _renderDetailV=renderDetail;renderDetail=function(){_renderDetailV();const g=GM[view];if(!g||$("#games .mh"))return;
- const age=pbAge(),upd=PBD.fetched?new Date(PBD.fetched).toLocaleTimeString([],{hour:"numeric",minute:"2-digit"}):"",stale=age>STALE_WARN;
- const note=`<div class="tm mnote">Only real bookmaker prices are shown (PointsBet${g.bk&&!g.src?" and DraftKings":""}). PointsBet prices updated ${upd||"–"}${stale?' · <b class="lost">may be out of date</b>':""}.`;
- if(!SL[dtab]||dtab==="main"){const tb=$("#games .tabs");if(tb&&!$("#games .mnote"))tb.insertAdjacentHTML("afterend",note+"</div>");return}
- let hid=0;document.querySelectorAll("#games > .card").forEach(c=>{const pn=c.querySelector(".pn"),nb=pn&&pn.querySelector("[data-ply]");if(!pn||!nb)return;const i=PLY.findIndex(p=>p.n===nb.dataset.ply&&(p.tm===g.h||p.tm===g.a));if(i<0)return;const p=PLY[i];
-  [...c.children].forEach(x=>{if(x.classList.contains("mk")||x.classList.contains("lad")||(x.classList.contains("ml")&&x.tagName==="DIV"))x.remove()});
-  const html=propMarkets(i,p,g,dtab);if(!html){c.remove();hid++;return}c.insertAdjacentHTML("beforeend",html)});
- const left=document.querySelectorAll("#games > .card .pn").length,tb=[...document.querySelectorAll("#games .tabs")].pop();
- if(tb)tb.insertAdjacentHTML("afterend",note+(hid?` ${hid} player${hid===1?"":"s"} without a ${SL[dtab].toLowerCase()} market yet (not released).`:"")+"</div>"+(left?"":`<div class="card cempty">No ${SL[dtab].toLowerCase()} markets released for this game yet.</div>`))};
-/* the slip re-checks every selection against the bookmaker's current price before a bet is placed */
-function curPrice(x){const g=GM[x.g];if(!g)return null;if(x.m==="p"){const i=PLY.findIndex(p=>p.n===x.pl&&(p.tm===g.h||p.tm===g.a));if(i<0)return null;const y=pleg(i,x.st,x.s,x.line,g.id);return y.na?null:y.odds}
- const y=leg(x.g,x.m,x.s,x.m==="s"?(x.s==="h"?x.line:-x.line):x.m==="h"||x.m==="b"||x.m==="dc"?undefined:x.line);return y.na?null:y.odds}
-const slipIssues=()=>sel.map(x=>{const c=curPrice(x);return c==null?{gone:1}:Math.abs(c-x.odds)>=.005?{was:x.odds,now:c}:null});
-const _renderSlipV=renderSlip;renderSlip=function(msg){_renderSlipV(msg);const iss=slipIssues();if(!iss.some(Boolean))return;
- document.querySelectorAll("#slip .leg").forEach((row,k)=>{const q=iss[k];if(!q)return;row.insertAdjacentHTML("beforeend",`<div class="pchg">${q.gone?"No longer offered by the bookmaker · remove it to continue":`Price changed ${f2(q.was)} → <b>${f2(q.now)}</b>`}</div>`)});
- const m=$("#slip #msg");if(m&&!m.querySelector(".accp"))m.insertAdjacentHTML("afterbegin",`<div class="accp">Prices have changed since you picked them. ${iss.some(q=>q&&q.gone)?"Remove the selections that are no longer offered, then ":""}<button data-accp="1">Accept new prices</button></div>`)};
-const _placeV=place;place=function(){const iss=slipIssues();if(iss.some(Boolean)){renderSlip();return}_placeV()};
-document.addEventListener("click",e=>{const b=e.target.closest&&e.target.closest("[data-accp]");if(!b)return;e.stopPropagation();
- sel=sel.filter(x=>curPrice(x)!=null).map(x=>({...x,odds:curPrice(x)}));renderGames();renderSlip()},true);
 
 </script>
 </body></html>
