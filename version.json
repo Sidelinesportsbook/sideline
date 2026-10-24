@@ -1,1 +1,1 @@
-{"v":"7db29fd51fb5","fix":"Fixed: your bet slip is now saved when you leave, finished games never show LIVE (legs show the final figure with HIT or MISS), and older open bets settle on the real final."}
+{"v":"7e949628b052","fix":"Fixed: cashed-out multis now show each leg\u0027s final stat with HIT or MISS (they stayed PENDING before). The cash-out amount is unchanged."}
