@@ -1,1 +1,1 @@
-{"v":"5c0ef50d921b","fix":"New: live scoreboards with quarter or half scores, a live box score on every game page (updates every 30 seconds), and player photos with recent form beside every player bet."}
+{"v":"2d9f8980331c","fix":"Fixed: finished games no longer stay on Home (they move to Past games), cash out now works during live games, and Miss-1 bets keep cash out after one missed leg."}
