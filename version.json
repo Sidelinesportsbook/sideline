@@ -1,1 +1,1 @@
-{"v":"7e949628b052","fix":"Fixed: cashed-out multis now show each leg\u0027s final stat with HIT or MISS (they stayed PENDING before). The cash-out amount is unchanged."}
+{"v":"ede27e57bb27","fix":"Markets now show only real bookmaker lines and prices (PointsBet and DraftKings), including their actual alternate lines. Anything not priced yet shows as not released."}
