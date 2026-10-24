@@ -1,1 +1,1 @@
-{"v":"c019da0e185d","fix":"Fixed: cash-outs now have their own count in your profile record instead of being counted as void."}
+{"v":"7db29fd51fb5","fix":"Fixed: your bet slip is now saved when you leave, finished games never show LIVE (legs show the final figure with HIT or MISS), and older open bets settle on the real final."}
