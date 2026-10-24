@@ -1,1 +1,1 @@
-{"v":"8a740233b3a3","fix":"Fixed: cashed-out multis now show each leg\u0027s final stat with HIT or MISS (they stayed PENDING before). The cash-out amount is unchanged."}
+{"v":"b78a46a4e398","fix":"Fixed: prices now follow PointsBet. Lines PointsBet lists use its exact price, and other alternate lines are priced from PointsBet\u0027s own line, so no more silly odds like 8+ assists at $9."}
