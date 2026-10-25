@@ -1,0 +1,19 @@
+[
+ {"d":"2026-10-25","t":"Fixed: when a multi loses early, its other legs now show HIT or MISS once their games finish (they stayed PENDING). Smoother graphs and page transitions."},
+ {"d":"2026-10-25","t":"Fixed: prices now follow PointsBet. Lines PointsBet lists use its exact price, and other alternate lines are priced from PointsBet's own line, so no more silly odds like 8+ assists at $9."},
+ {"d":"2026-10-24","t":"Fixed: cashed-out multis now show each leg's final stat with HIT or MISS (they stayed PENDING before). The cash-out amount is unchanged."},
+ {"d":"2026-10-24","t":"Fixed: your bet slip is now saved when you leave, finished games never show LIVE (legs show the final figure with HIT or MISS), and older open bets settle on the real final."},
+ {"d":"2026-10-24","t":"Fixed: cash-outs now have their own count in your profile record instead of being counted as void."},
+ {"d":"2026-10-24","t":"Fixed: finished games no longer stay on Home (they move to Past games), cash out now works during live games, and Miss-1 bets keep cash out after one missed leg."},
+ {"d":"2026-10-24","t":"New: live scoreboards with quarter or half scores, a live box score on every game page (updates every 30 seconds), and player photos with recent form beside every player bet."},
+ {"d":"2026-10-24","t":"Fixed: soccer players now show their photo where a verified one exists (about 1,070 players), otherwise their club crest."},
+ {"d":"2026-10-24","t":"New: official team logos everywhere, and fuller player profiles (shooting %, hit rates for every line, upcoming games, game logs that open each match)."},
+ {"d":"2026-10-24","t":"Fixed: Feedback is now on phones (top of the screen), and you get a message when a new version with fixes is ready."},
+ {"d":"2026-10-24","t":"New: tap any past game for its full match centre: box score, team stats, play-by-play or timeline, lineups and how your bets did."},
+ {"d":"2026-10-24","t":"Bolder green and red for wins, hits and profit vs losses and misses. Pending and void are now neutral grey."},
+ {"d":"2026-10-23","t":"New look: game-by-game player and team graphs with hit/miss colours, line labels, filters and tap-for-details."},
+ {"d":"2026-10-23","t":"Past games now sits next to Home on every screen size."},
+ {"d":"2026-10-23","t":"Fixed: bets on finished games could stay pending. They now settle as soon as ESPN confirms the final score."},
+ {"d":"2026-10-23","t":"Fixed: some multis were wrongly voided and refunded. They have been re-settled on the real result."},
+ {"d":"2026-10-23","t":"New: Past games, every game from the last 24 hours with scores, stats and your bets."}
+]

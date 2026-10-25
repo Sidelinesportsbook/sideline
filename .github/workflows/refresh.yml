@@ -1,0 +1,52 @@
+# Keeps the public Sideline site up to date on GitHub's servers, whether or not the home computer is on.
+# Every 30 minutes: standings, NBA season stats, PointsBet prices. Every 3 hours: the full ESPN rebuild.
+# Data carries over between runs through the Actions cache; the built page is published straight to GitHub Pages.
+name: Refresh Sideline
+on:
+  schedule:
+    - cron: "5,35 * * * *"
+    - cron: "50 */3 * * *"
+  workflow_dispatch:
+    inputs:
+      full:
+        description: "Full ESPN rebuild (10-25 minutes)"
+        type: boolean
+        default: false
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+concurrency:
+  group: refresh
+  cancel-in-progress: false
+jobs:
+  refresh:
+    runs-on: windows-latest
+    timeout-minutes: 55
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Restore saved data
+        uses: actions/cache/restore@v4
+        with:
+          path: build/data
+          key: data-${{ github.run_id }}
+          restore-keys: data-
+      - name: Refresh data and build the page
+        shell: powershell
+        run: |
+          $full = ('${{ github.event.schedule }}' -eq '50 */3 * * *') -or ('${{ inputs.full }}' -eq 'true')
+          if ($full) { & ./build/ci-refresh.ps1 -Full } else { & ./build/ci-refresh.ps1 }
+      - name: Save data for the next run
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: build/data
+          key: data-${{ github.run_id }}
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+      - id: deploy
+        uses: actions/deploy-pages@v4
