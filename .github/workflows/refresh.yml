@@ -3,6 +3,9 @@
 # Data carries over between runs through the Actions cache; the built page is published straight to GitHub Pages.
 name: Refresh Sideline
 on:
+  push:
+    branches: [main]
+    paths: ["build/**", ".github/workflows/**"]
   schedule:
     - cron: "5,35 * * * *"
     - cron: "50 */3 * * *"
