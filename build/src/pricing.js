@@ -39,7 +39,10 @@ function estMean(p,g,st){const P=NBAP[p.n];if(!P||!P.c27||!P.a26||g.sp!=="nba")r
 const _plegP=pleg;pleg=function(i,st,s,l,gid){const x=_plegP(i,st,s,l,gid),p=PLY[i],g=gid?GM[gid]:gOf(p&&p.tm);if(!x||!p||!g)return x;
  const ex=pbExact(p,g,st,s,l);if(ex){x.odds=ex;x.src="PointsBet";x.cal=0;return x}
  const m=pbMean(p,g,st);if(m==null)return x;
- if(s==="k")x.odds=ro(pge(st,m,l));else{const po=pge(st,m,Math.floor(l)+1);x.odds=ro(s==="o"?po:1-po)}x.src=null;x.cal=1;return x};
+ if(s==="k")x.odds=bkOdds(pge(st,m,l));else{const po=pge(st,m,Math.floor(l)+1);x.odds=bkOdds(s==="o"?po:1-po)}x.src=null;x.cal=1;return x};
+/* how bookmakers turn a chance into a price, fitted to 2,300+ PointsBet player prices: a small margin on likely outcomes
+   and shorter prices on long shots (odds = 1 / (1.025 p + 0.024)). A 50/50 line prices at 1.87 / 1.87, like the books. */
+function bkOdds(p){return Math.min(41,Math.max(1.01,Math.round(100/(1.025*p+.024))/100))}
 /* team markets: PointsBet's exact price for alternate lines, team totals, double chance and both teams to score */
 const _legP=leg;leg=function(id,m,s,l){const x=_legP(id,m,s,l),g=GM[id];if(!x||!g)return x;const M=(pbEv(g)||{}).mk||{};let v=null;
  if(m==="s"){const HL=l!==undefined?l:g.hl;if(!(HL===g.hl&&g.bk)){const r=(M.altsp||[]).find(r=>r[0]===HL);if(r)v=s==="h"?r[1]:r[2]}}

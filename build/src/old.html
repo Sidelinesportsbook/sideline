@@ -176,7 +176,7 @@ const CF={pts:["n",.3,5],reb:["n",.4,2],ast:["n",.42,2],pra:["n",.26,5],py:["n",
 const NO={g:1,atd:1,yc:1,hg:1,dd:1,td:1};
 const Phi=z=>{const t=1/(1+.2316419*Math.abs(z)),d=.3989423*Math.exp(-z*z/2),p=d*t*(.3193815+t*(-.3565638+t*(1.781478+t*(-1.821256+t*1.330274))));return z>0?1-p:p};
 const pois=(l,k)=>{let q=0,t=Math.exp(-l);for(let i=0;i<k;i++){q+=t;t*=l/(i+1)}return 1-q};
-const pge=(st,m,k)=>{const c=CF[st];return c[0]==="x"?m:c[0]==="n"?1-Phi((k-.5-m)/(c[1]*m)):pois(m,k)};
+const SDM={pts:[2.8,.35],reb:[1.5,.4],ast:[1.3,.45],pra:[3.4,.35],pr:[3.1,.35],pa:[3.1,.35],ra:[1.9,.4]};/* NBA stat spread (sd = c * mean^e) fitted to real PointsBet alternate lines */const pge=(st,m,k)=>{const c=CF[st];if(c[0]==="x")return m;const sd=SDM[st];if(sd&&m>0)return 1-Phi((k-.5-m)/(sd[0]*Math.pow(m,sd[1])));return c[0]==="n"?1-Phi((k-.5-m)/(c[1]*m)):pois(m,k)};
 const ddp=(p,t)=>{const a=pge("pts",p.mu.pts,10),b=pge("reb",p.mu.reb,10),c=pge("ast",p.mu.ast,10);return t?a*b*c:a*b+a*c+b*c-2*a*b*c};
 const ro=p=>Math.min(41,Math.max(1.01,Math.round(100/(p*1.08))/100));
 const N=(n,pos,o)=>[n,pos,o];
@@ -421,7 +421,7 @@ const G=D.map((x,i)=>{const[sp,h,a,iso,p,pd]=x,c=SP[sp],ph=p/100,id=sp+"_"+(h+a)
   if(L&&L.o25){const po=(1/L.o25[0])/(1/L.o25[0]+1/L.o25[1]);let lo=.5,hi=6;for(let i=0;i<40;i++){const mid=(lo+hi)/2;if(pois(mid,3)<po)lo=mid;else hi=mid}T=(lo+hi)/2;o.po=L.o25[0];o.pu=L.o25[1];o.t=2.5}
   o.T=T;const sh2=Math.max(.25,Math.min(.75,.5+.55*(o.p-(1-o.p-o.pd)))),lh=T*sh2,la=T-lh,pb=(1-Math.exp(-lh))*(1-Math.exp(-la));o.by=od(pb,1.06);o.bn=od(1-pb,1.06);if(L&&L.btts){o.by=L.btts[0];o.bn=L.btts[1]}}
  return o});
-const od2=(p,m)=>Math.max(1.01,Math.min(41,Math.round(100/(p*m))/100)),altT=(g,L,s)=>{const p=g.T!==undefined?pois(g.T,Math.floor(L)+1):1-Phi((L-g.t)/(g.sp==="nba"?17:10.5));return od2(s==="o"?p:1-p,1.06)};
+const od2=(p,m)=>Math.max(1.01,Math.min(41,Math.round(100/(p*m))/100)),altT=(g,L,s)=>{const p=g.T!==undefined?pois(g.T,Math.floor(L)+1):1-Phi((L-g.t)/(g.sp==="nba"?19.5:10.5));return od2(s==="o"?p:1-p,1.06)};
 const GM=Object.fromEntries(G.map(g=>[g.id,g])),gOf=tm=>G.filter(g=>g.h===tm||g.a===tm).sort((a,b)=>a.ts-b.ts)[0];
 let qs="",S={bal:100,bets:[]},sel=[],stake=5,mode="s",cur="nba",ra=false,view=null,dtab="main",useIns=false,useBx=false,pg="bets",bt="live";
 try{const x=JSON.parse(localStorage.getItem("sl2"));if(x&&typeof x.bal==="number")S=x}catch(e){}
@@ -437,7 +437,7 @@ const lock=g=>Date.now()>=g.ts;
 const key=x=>x.g+x.m+(x.pl||"")+(x.st||"")+(x.m==="tg"?x.s[0]:"");
 function leg(id,m,s,l){const g=GM[id],tm=s==="h"?g.h:g.a;
  if(m==="h")return{g:id,m,s,odds:s==="h"?g.oh:s==="d"?g.od:g.oa,line:0,d:s==="d"?"Draw":tm+" to win",bt:s==="d"?"Draw":sh(tm)};
- if(m==="s"){const HL=l!==undefined?l:g.hl,ln=s==="h"?HL:-HL;let o;if(l===undefined||l===g.hl)o=g.sh?(s==="h"?g.sh:g.sa):1.91;else{const ph=Phi((-g.hl+HL)/(g.sp==="nba"?12:13.5));o=od2(s==="h"?ph:1-ph,1.06)}return{g:id,m,s,odds:o,line:ln,d:tm+" "+sg(ln),bt:sh(tm)+" "+sg(ln)}}
+ if(m==="s"){const HL=l!==undefined?l:g.hl,ln=s==="h"?HL:-HL;let o;if(l===undefined||l===g.hl)o=g.sh?(s==="h"?g.sh:g.sa):1.91;else{const ph=Phi((-g.hl+HL)/(g.sp==="nba"?13:13.5));o=od2(s==="h"?ph:1-ph,1.06)}return{g:id,m,s,odds:o,line:ln,d:tm+" "+sg(ln),bt:sh(tm)+" "+sg(ln)}}
  if(m==="dc"){const pa=1-g.p-g.pd,p=s==="1x"?g.p+g.pd:s==="x2"?g.pd+pa:g.p+pa;return{g:id,m,s,odds:od2(p,1.06),line:0,d:"Double chance – "+(s==="1x"?sh(g.h)+" or draw":s==="x2"?"draw or "+sh(g.a):sh(g.h)+" or "+sh(g.a)),bt:s==="1x"?sh(g.h)+"/Draw":s==="x2"?"Draw/"+sh(g.a):sh(g.h)+"/"+sh(g.a)}}
  if(m==="tg"){const home=s[0]==="h",tn=home?g.h:g.a,soc=g.T!==undefined;let L=l,p;if(soc){const sh2=Math.max(.25,Math.min(.75,.5+.55*(g.p-(1-g.p-g.pd)))),lam=g.T*(home?sh2:1-sh2);p=pois(lam,Math.floor(L)+1)}else{const pr=(g.t-(home?g.hl:-g.hl))/2;if(L===undefined)L=Math.floor(pr)+.5;p=1-Phi((L-pr)/(g.sp==="nba"?10:7))}const ov=s[1]==="o";return{g:id,m,s,odds:od2(ov?p:1-p,1.06),line:L,d:tn+" "+(ov?"Over ":"Under ")+L+(soc?" goals":" points"),bt:(ov?"Over ":"Under ")+L}}
  if(m==="b")return{g:id,m,s,odds:s==="y"?g.by:g.bn,line:0,d:"Both teams to score – "+(s==="y"?"Yes":"No"),bt:s==="y"?"Yes":"No"};
