@@ -1,0 +1,2 @@
+# keep every file byte-for-byte as uploaded (the build matches exact text, including line endings)
+* -text

@@ -1,5 +1,6 @@
 # Keeps the public Sideline site up to date on GitHub's servers, whether or not the home computer is on.
 # Every 30 minutes: standings, NBA season stats, PointsBet prices. Every 3 hours: the full ESPN rebuild.
+# Files are checked out byte-for-byte (.gitattributes), so the build's exact-text edits match.
 # Data carries over between runs through the Actions cache; the built page is published straight to GitHub Pages.
 name: Refresh Sideline
 on:
