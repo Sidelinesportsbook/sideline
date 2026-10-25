@@ -98,7 +98,9 @@ $tmj = if (Test-Path "$R\data\teams.json") { [IO.File]::ReadAllText("$R\data\tea
 $code = (& $src 'head.html') + ($js -join "`n")
 $BUILD = -join ([Security.Cryptography.SHA1]::Create().ComputeHash([Text.Encoding]::UTF8.GetBytes($code)) | Select-Object -First 6 | % { $_.ToString('x2') })
 $sph = if (Test-Path "$R\data\soc-photos.json") { [IO.File]::ReadAllText("$R\data\soc-photos.json").Replace('</', '<\/') } else { '{}' }
-$chj = if (Test-Path "$R\data\changelog.json") { [IO.File]::ReadAllText("$R\data\changelog.json").Replace('</', '<\/') } else { '[]' }
+# the "what's new" list travels with the code (build\changelog.json in the cloud build), so new fixes always announce themselves
+$chf = if (Test-Path "$R\changelog.json") { "$R\changelog.json" } else { "$R\data\changelog.json" }
+$chj = if (Test-Path $chf) { [IO.File]::ReadAllText($chf).Replace('</', '<\/') } else { '[]' }
 $html = (& $src 'head.html') + "`n<script id=""bld"" type=""text/plain"">$BUILD</script>`n<script id=""chg"" type=""application/json"">$chj</script>`n<script id=""sph"" type=""application/json"">$sph</script>`n<script id=""seed"" type=""application/json"">$data</script>`n<script id=""tmd"" type=""application/json"">$tmj</script>`n<script id=""pbd"" type=""application/json"">$pbj</script>`n<script id=""fdd"" type=""application/json"">$fdj</script>`n<script>`n" + ($js -join "`n") + "`n</script>`n"
 [IO.File]::WriteAllText("$R\sideline.html", $html, ([Text.UTF8Encoding]::new($false)))
 New-Item -ItemType Directory -Force "$R\netlify" | Out-Null
