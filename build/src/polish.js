@@ -20,6 +20,13 @@ const LEAGUE_LOGO={nba:"https://a.espncdn.com/i/teamlogos/leagues/500/nba.png",e
 const teamCol=n=>{const t=TBY[n];return t?"#"+t.c:null};
 const _renderGamesPol2=renderGames;renderGames=function(){_renderGamesPol2();
  if(!view)document.querySelectorAll("#games .card .open .tr").forEach(tr=>{if(tr.querySelector(".trc"))return;const b=tr.querySelector("[data-team]"),g=GM[(tr.closest("[data-open]")||{}).dataset&&tr.closest("[data-open]").dataset.open];if(!b||!g)return;const r=teamRec(b.dataset.team,g.sp);if(r)b.insertAdjacentHTML("afterend",`<small class="trc">${r}</small>`)});
- const g=view&&GM[view];if(g&&g.sp==="nba"){const bar=$("#games .pbar");if(bar){const is=bar.querySelectorAll("i"),ch=teamCol(g.h),ca=teamCol(g.a);if(is[0]&&ch)is[0].style.background=ch;if(is[1]&&ca)is[1].style.background=ca;bar.classList.add("tcol")}}};
+ const g=view&&GM[view];if(g&&g.sp==="nba"){
+  /* basketball starts with a tip-off, not a kick-off */
+  document.querySelectorAll("#games .kv > span:first-child").forEach(sp=>{if(sp.textContent.trim()==="Kick-off")sp.textContent="Tip-off"});
+  const bar=$("#games .pbar");if(bar){const is=bar.querySelectorAll("i"),ch=teamCol(g.h);let ca=teamCol(g.a);
+   /* two teams in near-identical colours (e.g. Jazz and Lakers purple): the away team switches to its other official colour */
+   if(ch&&ca&&colDist(ch,ca)<90&&TBY[g.a]&&TBY[g.a].c2)ca="#"+TBY[g.a].c2;
+   if(is[0]&&ch)is[0].style.background=ch;if(is[1]&&ca)is[1].style.background=ca;bar.classList.add("tcol")}}};
+function colDist(a,b){const p=h=>[1,3,5].map(i=>parseInt(h.slice(i,i+2),16)),x=p(a),y=p(b);return Math.sqrt(x.reduce((s,v,i)=>s+(v-y[i])**2,0))}
 const _renderTabsPol=renderTabs;renderTabs=function(){_renderTabsPol();document.querySelectorAll("#tabs [data-tab]").forEach(b=>{const u=LEAGUE_LOGO[b.dataset.tab];if(u&&!b.querySelector(".lgl"))b.insertAdjacentHTML("afterbegin",`<img class="lgl" src="${u}" alt="" width="18" height="18">`)})};
 const _betCardPol=betCard;betCard=function(b,i){return _betCardPol(b,i).replace('<div class="bc"',`<div class="bc bs-${b.st==="open"?(betState(b)||"open").toLowerCase():b.st}"`)};
