@@ -1,1 +1,1 @@
-{"v":"b78a46a4e398","fix":"Fixed: prices now follow PointsBet. Lines PointsBet lists use its exact price, and other alternate lines are priced from PointsBet\u0027s own line, so no more silly odds like 8+ assists at $9."}
+{"v":"40695ac3b405","fix":"Fixed: when a multi loses early, its other legs now show HIT or MISS once their games finish (they stayed PENDING). Smoother graphs and page transitions."}
