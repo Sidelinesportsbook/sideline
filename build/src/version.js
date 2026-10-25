@@ -1,6 +1,6 @@
 /* ---------- versions: when a fix goes live, tell people and ask them to refresh ----------
    BUILD is a fingerprint of the page code (data-only refreshes don't change it).
-   1. Page already open when a new version is deployed: the public site checks version.json every minute, when the tab comes
+   1. Page already open when a new version is deployed: the public site checks version.json every 15 seconds and on taps, when the tab comes
       back into view and when the phone restores the page; a bar with the latest fix and a Refresh button appears.
    2. First visit after an update (any device): a bar says what was fixed, until the person dismisses it. */
 const CHG=(()=>{try{return JSON.parse((document.getElementById("chg")||{}).textContent||"[]")}catch(e){return[]}})(),BUILD=((document.getElementById("bld")||{}).textContent||"").trim();
@@ -9,7 +9,9 @@ function updBar(html,btns){const old=$("#upd");if(old)old.remove();document.body
 function newVersionBar(fix){if($("#upd.nv"))return;updBar(`<b>New version available.</b> ${esc(fix||"Fixes and improvements are ready.")} Refresh to update.`,`<button id="updgo">Refresh</button>`);$("#upd").classList.add("nv")}
 async function verCheck(){if(!BUILD||document.hidden||!/^https?:$/.test(location.protocol))return;
  try{const r=await fetch("version.json?t="+Date.now(),{cache:"no-store"});if(!r.ok)return;const v=await r.json();if(v&&v.v&&v.v!==BUILD)newVersionBar(v.fix)}catch(e){}}
-setTimeout(verCheck,5000);setInterval(verCheck,6e4);
+/* checks every 15 seconds, and on any tap, click or key press (at most every 10 seconds): the bar appears within seconds of an update going live */
+let VCT=0;const verSoon=()=>{if(Date.now()-VCT<1e4)return;VCT=Date.now();verCheck()};
+setTimeout(verCheck,3000);setInterval(()=>{VCT=Date.now();verCheck()},15e3);["pointerdown","keydown","scroll"].forEach(ev=>addEventListener(ev,verSoon,{passive:true}));
 document.addEventListener("visibilitychange",()=>{if(!document.hidden)verCheck()});addEventListener("pageshow",e=>{if(e.persisted)verCheck()});addEventListener("focus",verCheck);addEventListener("online",verCheck);
 /* after an update: tell returning players what changed (new players just start on the latest version) */
 setTimeout(()=>{try{const seen=localStorage.getItem("sl_fixseen"),back=!!(S&&S.name)||!!localStorage.getItem("sl_build");
