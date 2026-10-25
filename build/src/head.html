@@ -359,6 +359,24 @@ body.home header .spin{display:none}
 .card,.pgc,.gbc,.mh{border-radius:14px}.kv{border-color:color-mix(in srgb,var(--line) 70%,transparent)}
 @media(prefers-reduced-motion:reduce){.lvr b.bump,#slip .leg.legin,.pav img,.phs img{animation:none}}
 </style>
+<style id="v8">
+/* frosted header: the page shows softly through while scrolling */
+header{background:color-mix(in srgb,var(--card) 82%,transparent)!important;-webkit-backdrop-filter:saturate(1.4) blur(14px);backdrop-filter:saturate(1.4) blur(14px)}
+.bnav{background:color-mix(in srgb,var(--card) 88%,transparent)!important;-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px)}
+/* team records beside names */
+.tr .trc{margin-left:8px;font-size:11.5px;font-weight:600;color:var(--mut);letter-spacing:.2px}
+/* league logos on sport tabs */
+.tabs .lgl{width:18px;height:18px;object-fit:contain;margin-right:7px;vertical-align:-4px;filter:brightness(0) invert(1);opacity:.5;transition:opacity .2s}.tabs .on .lgl{opacity:.95}@media (prefers-color-scheme:light){:root:not([data-theme="dark"]) .tabs .lgl{filter:brightness(0)}}
+/* odds buttons: muted label, price stands out, accent on hover */
+.o span{color:var(--mut);font-weight:500}.o b{color:var(--tx)}.o:hover:not(:disabled) b{color:var(--acc)}
+.o.on span,.o.on b{color:var(--acx)!important}
+/* win probability in team colours */
+.pbar.tcol{height:10px;border-radius:99px;overflow:hidden;gap:2px;display:flex}.pbar.tcol i{transition:width .6s cubic-bezier(.22,1,.36,1)}
+/* bet cards: a status strip down the left edge */
+.bc{position:relative;overflow:hidden}.bc::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--line);transition:background-color .3s}
+.bc.bs-won::before{background:var(--ov)}.bc.bs-lost::before{background:var(--un)}.bc.bs-live::before{background:#d92d20}.bc.bs-cash::before{background:var(--acc)}
+.bc.bs-pending::before,.bc.bs-upcoming::before,.bc.bs-ref::before,.bc.bs-void::before{background:var(--mut);opacity:.55}
+</style>
 <header><div class="logo">Sideline</div><nav class="nav"><button id="nb" data-pg="bets">Home</button><button id="nm" data-pg="mb">My bets</button><button id="np" data-pg="pf">Profile</button><button id="nf" data-fb="1">Feedback</button></nav><button class="spin" id="spin"></button><div class="bal"><small>Balance</small><b id="bal"></b><span id="delta" class="dlt"></span></div></header>
 <div id="sv"></div><div id="wheel"></div><div id="toast" class="toast"></div><div id="fbw"></div><div id="psw"></div><div id="gate"><div class="mod gate"><div class="mc"><div class="logo" style="justify-content:center">Sideline</div><div class="tm" style="margin-top:12px">Loading your account…</div></div></div></div>
 <main><section id="gl"><div id="tabs"></div><div id="games"></div></section>
