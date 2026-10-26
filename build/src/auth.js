@@ -10,7 +10,7 @@ const saveAccts=a=>{try{localStorage.setItem(ACC_KEY,JSON.stringify(a))}catch(e)
 async function pwHash(pw,salt){const k=await crypto.subtle.importKey("raw",new TextEncoder().encode(pw),"PBKDF2",false,["deriveBits"]);
  return B64(await crypto.subtle.deriveBits({name:"PBKDF2",hash:"SHA-256",salt,iterations:150000},k,256))}
 let GMODE="login",AFAIL=0,ALOCK=0;
-const localAuth=()=>!DB&&!!(window.crypto&&crypto.subtle);
+const localAuth=()=>!window.SL_CLOUD&&!DB&&!!(window.crypto&&crypto.subtle);
 const _showGate0=showGate;showGate=function(){if(!localAuth())return _showGate0();if(S.name){$("#gate").innerHTML="";return}if(!booted)return;
  const c=GMODE==="create",nA=Object.keys(accts()).length+Object.keys(profs()).length;
  $("#gate").innerHTML=`<div class="mod gate"><div class="mc"><div class="logo" style="justify-content:center">Sideline</div>
