@@ -2,7 +2,10 @@
    Value = stake × boost × (odds of legs already won) × Π(placed odds ÷ current odds) for legs still to play, less a 5% margin.
    Current odds are this site's latest prices for the same selection (PointsBet / DraftKings where published, otherwise the
    same model the market was priced with). There is no live in-play odds feed, so cash out closes when a leg's game starts. */
-const CO_MARGIN=.95;
+/* cash-out = the bet's fair expected value minus one stated margin: 5% before the games start, 8% once a live leg is valued by
+   the live model (extra allowance for its uncertainty). Bookmaker prices carry their own margin (about 5% across both sides), so it is
+   removed first to get each leg's fair chance; nothing is counted twice. This is the site's own estimate, not a bookmaker offer. */
+const CO_PRE=.05,CO_LIVE=.08,CO_OVR=1.05;
 function legNow(l){const g=GM[l.g];if(!g)return null;
  if(l.m==="p"){const i=PLY.findIndex(p=>p.n===l.pl&&(p.tm===g.h||p.tm===g.a));if(i<0)return null;const x=pleg(i,l.st,l.s,l.line,g.id);return x&&x.odds>1?x.odds:null}
  const ln=l.m==="s"?(l.s==="h"?l.line:-l.line):l.m==="t"||l.m==="tg"?l.line:undefined;const x=leg(l.g,l.m,l.s,ln);return x&&x.odds>1?x.odds:null}
@@ -36,7 +39,7 @@ const liveAge=()=>Date.now()-Math.max(POLL&&POLL.state==="ok"?POLL.at:0,FEEDAT||
 function legProb(l){const g=GM[l.g];if(!g)return{ok:0,why:"Game details not available yet"};
  if(RES[l.g])return{ok:0,why:"Game finished · settling on the final result"};
  const lv=LIVE[l.g];
- if(!lv){if(lock(g))return{ok:0,why:"Game has started · waiting for live data"};if(l.m==="p"&&INJ[l.pl]==="out")return{ok:0,why:"Suspended: player ruled out"};const c=legNow(l);return c?{ok:1,p:1/c}:{ok:0,why:"Suspended: no current price for a leg"}}
+ if(!lv){if(lock(g))return{ok:0,why:"Game has started · waiting for live data"};if(l.m==="p"&&INJ[l.pl]==="out")return{ok:0,why:"Suspended: player ruled out"};const c=legNow(l);return c?{ok:1,p:Math.min(.995,1/c/CO_OVR)}:{ok:0,why:"Suspended: no current price for a leg"}}
  if(/Suspend|Delay/i.test(lv.q||""))return{ok:0,why:"Suspended: play is "+(/Delay/i.test(lv.q)?"delayed":"suspended")};
  if(liveAge()>6*6e4)return{ok:0,why:"Suspended: live data is delayed"};
  const p=liveProb(l,g,lv);return p==null?{ok:0,why:"No live price for this market"}:{ok:1,p,live:1}}
@@ -48,16 +51,22 @@ function coQuote(b){if(b.st!=="open")return{ok:0,why:""};const lost=b.legs.filte
  const ps=[];let live=0;for(const l of b.legs){if(l.r)continue;const q=legProb(l);if(!q.ok)return{ok:0,why:q.why};ps.push(q.p);if(q.live)live=1}
  const pay=b.stake*(b.bx||1)*b.legs.reduce((x,l)=>l.r==="v"?x:x*l.odds,1),all=ps.reduce((x,p)=>x*p,1);
  const one=b.ins&&!lost?ps.reduce((s,pj,j)=>s+(1-pj)*ps.reduce((x,p,i)=>i===j?x:x*p,1),0):0;
- const ev=lost?b.stake*all:pay*all+b.stake*one,v=Math.floor(Math.min(ev*CO_MARGIN,pay)*100)/100;
- return v>0?{ok:1,amt:v,live,lostLeg:lost}:{ok:0,why:"No value available"}}
+ const ev=lost?b.stake*all:pay*all+b.stake*one,mg=live?CO_LIVE:CO_PRE,v=Math.floor(Math.min(ev*(1-mg),pay-.01)*100)/100;
+ /* chance: every remaining leg wins (legs treated as independent; same-game legs that move together are not boosted) */
+ return v>0?{ok:1,amt:v,live,lostLeg:lost,pay:lost?b.stake:pay,win:all,refund:one,margin:mg,ev}:{ok:0,why:"No value available"}}
+const pct=p=>p>=.995?">99%":p<.005?"<1%":Math.round(p*100)+"%";
+/* cash out now vs keep the bet open, side by side */
+function coCompare(b,q){const prof=q.pay-b.stake;return`<div class="coc"><div><small>Cash out now</small><b class="${q.amt>=b.stake?"won":"lost"}">${$$(q.amt)}</b><em>${sgn(q.amt-b.stake)} · guaranteed</em></div>
+ <div><small>Keep it open${q.lostLeg?" (refund if the rest win)":""}</small><b>${$$(q.pay)}</b><em>${q.lostLeg?"stake back":sgn(prof)+" profit"} · ${pct(q.win)} chance</em></div></div>
+ <div class="tm cocn">Keeping it open could pay ${$$(q.pay)}, but you lose the ${$$(b.stake)} stake if ${q.lostLeg?"another leg misses":b.legs.length>1?"any leg misses":"it misses"}. The cash-out figure is this site's estimate${q.live?" from the live score and time left":" from current prices"}, less a ${Math.round(q.margin*100)}% margin. It isn't a bookmaker offer.</div>`}
 function coRow(b,i){if(b.st!=="open")return"";const q=coQuote(b);
- return q.ok?`<div class="co"><span><small>Cash out now${q.live?" · live value, modelled from the score and time left":""}${q.lostLeg?" · one leg missed (Miss-1 refund still possible)":""}</small><b class="${q.amt>=b.stake?"won":"lost"}">${$$(q.amt)}</b></span><button class="cob" data-co="${i}">Cash out</button></div>`
+ return q.ok?`<div class="co"><div class="cow">${coCompare(b,q)}</div><button class="cob" data-co="${i}">Cash out ${$$(q.amt)}</button></div>`
   :`<div class="co off"><small>Cash out unavailable · ${esc(q.why)}</small></div>`}
 let CO_BUSY=false;
 function coOpen(i,note){const b=S.bets[i],q=coQuote(b);if(!q.ok){toast("Cash out unavailable: "+q.why);renderBets();return}
  $("#psw").innerHTML=`<div class="mod" id="pso"><div class="mc" role="dialog" aria-label="Cash out"><button class="x cls" data-psx="1" aria-label="Close">×</button><h2 style="margin-top:4px">Cash out this bet?</h2>
  <div class="tm" style="margin:2px 0 10px">${b.legs.length>1?"Multi · "+b.legs.length+" legs":esc(b.legs[0].d)}</div>
- <div class="kv"><span>Cash-out offer</span><b class="cov">${$$(q.amt)}</b></div><div class="kv"><span>Original stake</span><b>${$$(b.stake)}</b></div><div class="kv"><span>If it wins</span><b>${$$(b.stake*b.odds)}</b></div><div class="kv"><span>Profit / loss now</span><b class="${q.amt-b.stake>=0?"won":"lost"}">${sgn(q.amt-b.stake)}</b></div>
+ ${coCompare(b,q)}<div class="kv"><span>Original stake</span><b>${$$(b.stake)}</b></div><div class="kv"><span>Chance every remaining leg wins</span><b>${pct(q.win)}</b></div>
  ${note?`<div class="msg">${esc(note)}</div>`:""}<button class="go" data-coc="${i}" data-amt="${q.amt}">Cash out ${$$(q.amt)}</button>
  <div class="tm" style="font-size:11px;margin-top:8px">The offer follows the latest odds and can change before you confirm. Play money only.</div></div></div>`}
 function coConfirm(i,shown){if(CO_BUSY)return;const b=S.bets[i];if(!b||b.st!=="open"){$("#psw").innerHTML="";renderBets();return}
