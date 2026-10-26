@@ -44,3 +44,23 @@ const _settleAll9=settleAll;settleAll=function(){_settleAll9();let ch=false;
  if(ch){slog("settle","leg results recorded on closed bets");save()}};
 /* new selections carry the player's ESPN id, so they stay linked to the right player after trades or name changes */
 const _pleg9=pleg;pleg=function(...a){const x=_pleg9(...a);if(x&&x.pl&&!x.pid){const p=NBAP[x.pl]||SOCP[x.pl];if(p&&p.id)x.pid=String(p.id)}return x};
+/* ---------- voided legs: odds and potential return follow the remaining legs ----------
+   A leg is void only on verified grounds: the final box score shows the player did not play (covers players ruled out
+   beforehand and late withdrawals), or the game was postponed, cancelled or abandoned. A player who played, even briefly
+   before an injury, is settled on his real stats. Once a leg is void, the bet's current odds are rebuilt from the legs
+   that still count (product of their odds x boost), so they can never be adjusted twice, on any device. The original
+   odds are kept in odds0, and every void is logged once in voidLog (leg, reason, time, odds before and after).
+   Cashed-out bets keep their accepted amount; settled bets were already paid on the remaining legs. */
+const legsOdds=(b,keepVoid)=>Math.round(b.legs.reduce((x,l)=>l.r==="v"&&!keepVoid?x:x*l.odds,1)*(b.bx||1)*100)/100;
+function applyVoids(){let ch=false;S.bets.forEach(b=>{if(!b.legs.some(l=>l.r==="v"))return;
+ if(b.odds0===undefined){b.odds0=legsOdds(b,1);ch=true}
+ const log=b.voidLog||(b.voidLog=[]);b.legs.forEach((l,i)=>{if(l.r!=="v"||log.some(x=>x.i===i))return;log.push({i,leg:l.d,reason:l.vr||"void",t:Date.now(),from:b.st==="open"?b.odds:null,to:b.st==="open"?legsOdds(b):null});ch=true});
+ if(b.st==="open"){const cur=legsOdds(b);if(b.odds!==cur){b.odds=cur;ch=true}}});if(ch)save();return ch}
+const _settleAllV=settleAll;settleAll=function(){_settleAllV();applyVoids()};
+/* the injury report as a warning only, until the box score settles it */
+const _lpV=legProg;legProg=function(l){const r=_lpV(l);if(l.r==="v")return{...r,lab:"VOID",txt:"Void · "+(l.vr||"leg void")+" · removed from the multi"};
+ if(!l.r&&l.m==="p"&&INJ[l.pl]==="out")return{...r,txt:"Listed out on the injury report · voids if he doesn't play, settles normally if he does"};return r};
+/* bet cards: revised odds, with the original struck through and the reason */
+const _betCardV=betCard;betCard=function(b,i){let h=_betCardV(b,i);const vs=b.legs.filter(l=>l.r==="v");if(!vs.length||b.odds0===undefined||b.odds0===b.odds)return h;
+ const note=`<div class="tm vnote">${vs.length} leg${vs.length>1?"s":""} void (${vs.map(l=>esc(String(l.d).split(" Over ")[0].split(" Under ")[0])+": "+esc(l.vr||"void")).join("; ")}). Odds revised from <s>${f2(b.odds0)}</s> to <b>${f2(b.odds)}</b>${b.st==="open"?`, potential return ${$$(b.stake*b.odds)}`:""}.</div>`;
+ return h.replace('<div class="bf">',note+'<div class="bf">')};

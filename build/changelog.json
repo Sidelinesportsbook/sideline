@@ -1,4 +1,5 @@
 [
+ {"d":"2026-10-26","t":"Fixed: when a player doesn't play, that leg is voided and your multi's odds and return are recalculated from the remaining legs straight away (original odds shown for reference)."},
  {"d":"2026-10-26","t":"Fairer cash outs: the value is now the bet's fair worth less a stated 5% (8% live) margin, shown next to what you'd win by keeping it open and your chance of winning."},
  {"d":"2026-10-26","t":"New: log in with your username and password on any phone or computer. Already playing? Choose Create account with your same username to move your bets online."},
  {"d":"2026-10-25","t":"New look: team records on game cards, league logos on the tabs, win chances in team colours, a status strip on every bet and a frosted header."},

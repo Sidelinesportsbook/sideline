@@ -56,7 +56,7 @@ $rest = Rep $rest 'if(b.st==="won"||b.st==="lost"){o.np+=pr;o.pl.push(pr);o.plt.
 $rest = Rep $rest 'if(!GM[l.g]||(PPD&&PPD[l.g])){l.r="v";ch=true;return}' 'if(PPD&&PPD[l.g]){l.r="v";l.vr=typeof PPD[l.g]==="string"?PPD[l.g]:"postponed or cancelled";ch=true;return}if(!GM[l.g]&&!RES[l.g]&&!LIVE[l.g])return;'
 $rest = Rep $rest 'if(x===undefined||isNaN(x)){l.r="v";ch=true;return}' 'if(!RP[l.g]||!Object.keys(RP[l.g]).length)return;if(x===undefined||isNaN(x)){l.r="v";l.vr="player did not play";ch=true;return}'
 $rest = Rep $rest 'if(!g)return{st:"void",lab:"Void",pct:0,txt:"This game is no longer listed."};' 'if(!g)return{st:l.r==="v"?"void":"idle",lab:l.r==="v"?"Void":"Pending",pct:0,txt:l.r==="v"?"Void"+(l.vr?": "+l.vr:""):"Waiting for the final result."};'
-$rest = Rep $rest 'if(l.m==="p"&&INJ[l.pl]==="out"&&!r){l.r="v";ch=true;return}' 'if(l.m==="p"&&INJ[l.pl]==="out"&&!r&&!lv){l.r="v";l.vr="player ruled out";ch=true;return}'
+$rest = Rep $rest 'if(l.m==="p"&&INJ[l.pl]==="out"&&!r){l.r="v";ch=true;return}' '/* an injury report alone never voids a leg: the verified box score decides (did not play = void, played = settled) */'
 # profile record: Won / Lost / Refunded / Cashed out / Void. Cash-outs are their own count, never "void"
 $rest = Rep $rest 'ref:0,vd:0,open:0' 'ref:0,vd:0,co:0,open:0'
 $rest = Rep $rest 'else if(b.st==="ref")o.ref++;else o.vd++;' 'else if(b.st==="ref")o.ref++;else if(b.st==="cash")o.co++;else o.vd++;'
