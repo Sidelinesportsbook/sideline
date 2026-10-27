@@ -1,8 +1,11 @@
-# Live scores, finals and box scores for the page's shared feed (feed/current). Small and fast, safe to run every few minutes.
+﻿# Live scores, finals and box scores for the page's shared feed (feed/current). Small and fast, safe to run every few minutes.
 # Covers every supported league (NBA, Premier League, Champions League): games in play, and games that finished in the last 36 hours,
 # with team names, logos, the real completion time (ESPN play-by-play wallclock) and, for soccer games that went to extra time or
 # penalties, the 90-minute score that soccer markets settle on.
 # Writes data\feed.json atomically and prints one of: NO_GAMES (nothing in play or recently finished) or FEED_READY <live> <final>.
+# Every final also goes into data\results-archive.json (kept for good), which the leaderboard checks bets against.
+# -Days N: catch the archive up on the last N days only (feed.json is left alone).
+param([int]$Days = 0)
 $ErrorActionPreference = 'Stop'
 $EB = 'https://site.api.espn.com/apis/site/v2/sports/'
 $LG = [ordered]@{ nba = 'basketball/nba'; epl = 'soccer/eng.1'; ucl = 'soccer/uefa.champions' }
@@ -13,12 +16,12 @@ $now = (Get-Date).ToUniversalTime(); $live = [ordered]@{}; $res = [ordered]@{}; 
 foreach ($k in $LG.Keys) {
   $seen = @{}
   # ESPN dates follow the US day, so two days back covers every game that can have finished in the last 24 hours
-  foreach ($dd in -2..0) {
+  foreach ($dd in $(if ($Days) { -$Days } else { -2 })..0) {
     $sb = Get-Json "$EB$($LG[$k])/scoreboard?dates=$($now.AddDays($dd).ToString('yyyyMMdd'))"; if (-not $sb) { continue }
     foreach ($e in $sb.events) {
       if ($seen[$e.id]) { continue }; $seen[$e.id] = 1
       $st = $e.status.type; if ($st.state -eq 'pre' -and $st.name -notmatch 'POSTPONED|CANCELED') { continue }
-      if (($now - [datetime]$e.date).TotalHours -gt 36) { continue }
+      if (-not $Days -and ($now - [datetime]$e.date).TotalHours -gt 36) { continue }
       $c = $e.competitions[0]; $HOMEC = $c.competitors | ? homeAway -eq 'home'; $AWAYC = $c.competitors | ? homeAway -eq 'away'
       $gid = "e$($e.id)"
       $m = [ordered]@{ sp = $k; iso = $e.date; state = $st.state; stn = $st.name; det = [string]$st.shortDetail; done = [bool]$st.completed; h = Side $HOMEC; a = Side $AWAYC }
@@ -53,6 +56,14 @@ foreach ($k in $LG.Keys) {
     }
   }
 }
+# the results archive: every final and box score, by game, for checking leaderboard bets (never trimmed)
+$ap = Join-Path $PSScriptRoot 'data\results-archive.json'; $arc = @{ res = @{}; rp = @{}; ppd = @{}; ev = @{} }
+if (Test-Path $ap) { try { $o = [IO.File]::ReadAllText($ap) | ConvertFrom-Json; foreach ($k in 'res', 'rp', 'ppd', 'ev') { if ($o.$k) { foreach ($p in $o.$k.PSObject.Properties) { $arc[$k][$p.Name] = $p.Value } } } } catch { Write-Warning 'results archive unreadable; starting it again' } }
+foreach ($id in @($ev.Keys)) { $m = $ev[$id]; $gid = "e$id"; if ($m.state -ne 'post' -and $m.state -ne 'void') { continue }
+  $x = [ordered]@{ sp = $m.sp; iso = $m.iso }; if ($m.end) { $x.end = $m.end }; $arc.ev[$gid] = $x
+  if ($res.Contains($gid)) { $arc.res[$gid] = $res[$gid] }; if ($rp.Contains($gid) -and $rp[$gid].Count) { $arc.rp[$gid] = $rp[$gid] }; if ($ppd.Contains($gid)) { $arc.ppd[$gid] = $ppd[$gid] } }
+[IO.File]::WriteAllText("$ap.tmp", ($arc | ConvertTo-Json -Depth 7 -Compress), [Text.UTF8Encoding]::new($false)); Move-Item -Force "$ap.tmp" $ap
+if ($Days) { "ARCHIVE_READY $($arc.res.Count) games"; exit 0 }
 if (-not $live.Count -and -not $res.Count -and -not $ppd.Count) { 'NO_GAMES'; exit 0 }
 $feed = [ordered]@{ at = $now.ToString('yyyy-MM-ddTHH:mm:ssZ'); upd = 'Live scores from ESPN'; inj = [ordered]@{}; live = $live; res = $res; rp = $rp; ev = $ev; ppd = $ppd }
 $out = Join-Path $PSScriptRoot 'data\feed.json'; $tmp = "$out.tmp"

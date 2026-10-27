@@ -1,0 +1,114 @@
+/* ---------- Leaderboard ----------
+   Players join from the Leaderboard page or their profile (off until they do). While joined, this device keeps a public copy
+   of the account's bets in lb/<account id> (Firestore rules: anyone may read it, only that signed-in account may write it,
+   under its own username). Every 30 minutes GitHub's servers check those bets against the official results and publish
+   leaderboard.json (lb-agg.js + lbcore.js); this page ranks from that file with the same engine, so the rankings, public
+   profiles and your own profile all use the same rules. Leaving deletes the public copy. Hiding your profile keeps you
+   ranked with your totals, without your bet history. */
+const LB={data:null,at:0,err:"",busy:false,all:false,open:null,myId:"",pub:"",f:{period:"all",metric:"net",sport:"all",type:"all",min:10}};
+const LB_SITE=()=>!!window.SL_CLOUD&&!!window.SL_FS;
+const lbSet=()=>S.lb||(S.lb={on:false,prof:true});
+/* settled-at times: stamped when a bet settles, so period filters use when it was decided, not when it was placed */
+const _settleLB=settleAll;settleAll=function(){const open=S.bets.filter(b=>b.st==="open");_settleLB();let ch=false;
+ open.forEach(b=>{if(b.st!=="open"&&!b.sat){b.sat=b.co&&b.co.t||Date.now();ch=true}});if(ch)save()};
+const lbSp=g=>(GM[g]&&GM[g].sp)||((typeof EVM!=="undefined"&&EVM[String(g).slice(1)])||{}).sp||"";
+const lbEnd=legs=>{const t=legs.map(l=>{const e=typeof EVM!=="undefined"&&EVM[String(l.g).slice(1)];return e&&e.end?Date.parse(e.end):GM[l.g]?GM[l.g].ts+3*36e5:0}).filter(Boolean);return t.length?Math.min(Date.now(),Math.max(...t)):0};
+const myRecs=()=>S.bets.map(b=>LBC.fromBet(b,lbSp,lbEnd));
+/* the public copy: only what's needed to check each bet (no balance, slip, email or password) */
+const lbRaw=b=>({t:b.t,st:b.st,stake:b.stake,odds:b.odds,ins:b.ins?1:0,bx:b.bx||1,sat:b.sat||null,co:b.co?{amt:b.co.amt,t:b.co.t}:null,
+ legs:b.legs.map(l=>({g:l.g,m:l.m,s:l.s,line:l.line,pl:l.pl||"",st:l.st||"",odds:l.odds,r:l.r||"",d:l.d||""}))});
+let LBSIG="";
+async function lbSync(force){if(!LB_SITE()||!UID||!S.name||!lbSet().on)return;
+ let bs=S.bets.slice(-1500),j=JSON.stringify(bs.map(lbRaw));while(j.length>850000&&bs.length>50){bs=bs.slice(Math.ceil(bs.length/5));j=JSON.stringify(bs.map(lbRaw))}
+ const sig=S.name+"|"+!!S.lb.prof+"|"+j;if(!force&&sig===LBSIG)return;LBSIG=sig;
+ try{await window.SL_FS.doc("lb/"+UID).set({name:S.name,prof:!!S.lb.prof,v:1,upd:firebase.firestore.FieldValue.serverTimestamp(),j});LB.pub="ok"}
+ catch(e){LBSIG="";LB.pub="err";slog("lb","publish failed: "+(e&&e.code||e))}if(pg==="lb")lbPaint()}
+setInterval(()=>lbSync(),5000);
+async function lbLeave(){S.lb.on=false;save();LBSIG="";try{await window.SL_FS.doc("lb/"+UID).delete()}catch(e){}}
+(async()=>{for(let k=0;k<60&&!UID;k++)await new Promise(r=>setTimeout(r,1000));if(!UID||!crypto.subtle)return;
+ const h=await crypto.subtle.digest("SHA-256",new TextEncoder().encode("sideline:"+UID));LB.myId=[...new Uint8Array(h)].map(x=>x.toString(16).padStart(2,"0")).join("").slice(0,16);if(pg==="lb")lbPaint()})();
+async function lbLoad(force){if(LB.busy||(!force&&LB.data&&Date.now()-LB.at<12e4))return;LB.busy=true;lbPaint();
+ try{const r=await fetch("leaderboard.json?t="+Date.now(),{cache:"no-store"});if(!r.ok)throw new Error(r.status);const d=await r.json();if(!d||!Array.isArray(d.users))throw new Error("bad file");LB.data=d;LB.at=Date.now();LB.err=""}
+ catch(e){LB.err=LB.data?"Couldn't refresh just now. Showing the last update.":"Couldn't load the leaderboard. Check your connection and try again."}LB.busy=false;lbPaint()}
+setInterval(()=>{if(pg==="lb"&&!document.hidden)lbLoad(true)},12e4);
+
+const LB_PER={all:"All time",month:"This month",d30:"Last 30 days",year:"This year"},LB_MET={net:"Net profit",roi:"ROI",wr:"Win rate",wins:"Wins"},LB_TYP={all:"All bets",single:"Singles",multi:"Multis"};
+const lbSports=()=>Object.keys(SP).filter(k=>k!=="nfl");
+const lbPct=(x,sg)=>x===null||x===undefined?"–":(sg&&x>0?"+":"")+x.toFixed(1)+"%";
+const lbStreak=s=>s.streak?`<span class="${s.streak.k==="w"?"won":"lost"}">${s.streak.k==="w"?"W":"L"}${s.streak.n}</span>`:"–";
+const lbMain=(m,s)=>m==="net"?`<b class="${s.net>0?"won":s.net<0?"lost":""}">${sgn(s.net)}</b>`:m==="roi"?`<b class="${s.roi>0?"won":s.roi<0?"lost":""}">${lbPct(s.roi,1)}</b>`:m==="wr"?`<b>${lbPct(s.wr)}</b>`:`<b>${s.w}</b>`;
+const lbAgo=t=>{const m=Math.round((Date.now()-t)/6e4);return m<1?"just now":m<60?m+" min ago":Math.round(m/60)+" h ago"};
+function lbFilters(){const f=LB.f,sel=(k,lab,o)=>`<label><small>${lab}</small><select data-lbf="${k}">${Object.entries(o).map(([v,t])=>`<option value="${v}"${String(f[k])===v?" selected":""}>${t}</option>`).join("")}</select></label>`;
+ return`<div class="lbf">${sel("period","Period",LB_PER)}${sel("metric","Rank by",LB_MET)}${sel("sport","Sport",Object.assign({all:"All sports"},...lbSports().map(k=>({[k]:SP[k].n}))))}${sel("type","Bet type",LB_TYP)}
+ ${f.metric==="roi"||f.metric==="wr"?sel("min","Qualify",{5:"5+ bets",10:"10+ bets",25:"25+ bets",50:"50+ bets"}):""}</div>
+ ${f.metric==="roi"||f.metric==="wr"?`<div class="tm lbq">Ranking by ${LB_MET[f.metric]} needs at least <b>${f.min} ${f.metric==="wr"?"won or lost":"settled"} bets</b> in the selected period, so one lucky bet can't top the table.</div>`:""}`}
+const LB_COL={net:0,roi:1,wr:2,wins:4},lbCols=a=>a.map((h,i)=>`<span${i===LB_COL[LB.f.metric]?' class="lbon"':""}>${h}</span>`).join("");
+const lbStatCells=s=>lbCols([`<b class="${s.net>0?"won":s.net<0?"lost":""}">${sgn(s.net)}</b>`,lbPct(s.roi,1),lbPct(s.wr),s.tracked+(s.pending?`<small> · ${s.pending} open</small>`:""),s.w,s.l,s.v,$$(s.staked),$$(s.ret),s.avg?f2(s.avg):"–",s.best!==null?"+"+$$(s.best):"–",lbStreak(s)]);
+function lbRow(x,me){const s=x.s,top=x.rank<=3?" lbt"+x.rank:"";
+ return`<button class="lbr${top}${me?" lbmine":""}" data-lbu="${esc(x.u.id)}"><span class="lbk">${x.rank}</span><span class="lbn"><b>${esc(dn(x.u.name))}${me?" <i>You</i>":""}</b><small>${s.w}W · ${s.l}L${s.v?" · "+s.v+" void":""} · ${s.tracked} bet${s.tracked===1?"":"s"}</small></span>
+ <span class="lbm">${lbMain(LB.f.metric,s)}<small>${LB.f.metric==="net"?lbPct(s.roi,1)+" ROI":LB.f.metric==="wins"?lbPct(s.wr)+" win rate":sgn(s.net)}</small></span><span class="lbx">${lbStatCells(s)}</span></button>`}
+function lbMe(R,users){const st=lbSet(),f={...LB.f,now:Date.now()},mine=LBC.stats(myRecs(),f);
+ const box=(h,body)=>`<div class="card lbme"><div class="lbmh">${h}</div>${body}</div>`;
+ const mini=s=>`<div class="lbms"><div><small>Net</small><b class="${s.net>0?"won":s.net<0?"lost":""}">${sgn(s.net)}</b></div><div><small>ROI</small><b>${lbPct(s.roi,1)}</b></div><div><small>Win rate</small><b>${lbPct(s.wr)}</b></div><div><small>Settled</small><b>${s.settled}</b></div></div>`;
+ if(!LB_SITE())return box(`<b>Your stats</b>`,mini(mine)+`<div class="tm">To join the leaderboard, log in on the public site: sidelinesportsbook.github.io/sideline</div>`);
+ if(!st.on)return box(`<b>You're not on the leaderboard</b>`,mini(mine)+`<div class="tm">Your numbers above are private. Joining shares your username and your bets so they can be checked against official results and ranked. You can hide your bet history or leave at any time.</div><button class="go" data-lbjoin="1">Join the leaderboard</button>`);
+ const me=users.find(u=>u.id&&u.id===LB.myId),hit=me&&R.rows.find(x=>x.u===me),N=R.rows.length;
+ const ctl=`<div class="lbctl"><label class="lbsw"><input type="checkbox" data-lbprof="1"${st.prof?" checked":""}> Show my bet history on my public profile</label><button class="lnk" data-lbleave="1">Leave the leaderboard</button></div>${LB.pub==="err"?`<div class="tm lost">Couldn't share your bets just now. It will try again automatically.</div>`:""}`;
+ if(!me)return box(`<b>You've joined</b><span class="tm">You'll appear after the next check (every 30 minutes).</span>`,mini(mine)+ctl);
+ const s=hit?hit.s:LBC.stats(me.recs,f),need=LB.f.metric==="roi"?LB.f.min-s.counted:LB.f.metric==="wr"?LB.f.min-(s.w+s.l):1-s.counted,wait=(me.pend||0)+(me.unv||0);
+ return box(hit?`<span class="lbk${hit.rank<=3?" lbt"+hit.rank:""}">${hit.rank}</span><b>Your rank: ${hit.rank} of ${N}</b><span class="tm">${LB_MET[LB.f.metric]} · ${LB_PER[LB.f.period]}</span>`:`<b>Not ranked yet</b><span class="tm">${need>0?`${need} more ${LB.f.metric==="wr"?"won or lost":"settled"} bet${need===1?"":"s"} to qualify`:"No settled bets in this view"}</span>`,
+  mini(s)+`<button class="lnk" data-lbu="${esc(me.id)}">View your public profile</button>${wait?`<div class="tm">${me.pend?me.pend+" open bet"+(me.pend===1?"":"s")+" (not counted until settled)":""}${me.pend&&me.unv?" · ":""}${me.unv?me.unv+" waiting for official results":""}</div>`:""}`+ctl)}
+function lbPaint(){const el=$("#lb");if(!el||pg!=="lb")return;const d=LB.data,users=d?d.users:[],f={...LB.f,now:Date.now()},R=LBC.rank(users,f,LB.f.metric,+LB.f.min);
+ const head=`<div class="lbh"><div><h1>Leaderboard</h1><div class="tm">Real results from players who've joined, checked against official results.</div></div><button class="lbref" data-lbref="1"${LB.busy?" disabled":""}>${LB.busy?"Loading…":"Refresh"}</button></div>`;
+ let list;
+ if(!d&&LB.busy)list=`<div class="card lbl">${'<div class="lbsk"></div>'.repeat(5)}</div>`;
+ else if(!d)list=`<div class="card lbe"><b>Leaderboard unavailable</b><div class="tm">${esc(LB.err||"")}</div><button class="go" data-lbref="1">Try again</button></div>`;
+ else if(!users.length)list=`<div class="card lbe"><b>No one has joined yet</b><div class="tm">Be the first: join, and your settled bets are ranked at the next check.</div></div>`;
+ else if(!R.rows.length)list=`<div class="card lbe"><b>No ranked players for these filters</b><div class="tm">Try a longer period, another sport or a lower qualifying number.</div></div>`;
+ else{const rows=LB.all?R.rows:R.rows.slice(0,10),mine=x=>x.u.id===LB.myId,meRow=R.rows.find(mine);
+  list=`<div class="card lbl"><div class="lbr lbhd"><span class="lbk">#</span><span class="lbn">Player</span><span class="lbm">${LB_MET[LB.f.metric]}</span><span class="lbx">${lbCols(["Net profit","ROI","Win rate","Bets","Won","Lost","Void","Staked","Returns","Avg odds","Best win","Streak"])}</span></div>
+  ${rows.map(x=>lbRow(x,mine(x))).join("")}${meRow&&!rows.includes(meRow)?`<div class="lbgap">···</div>`+lbRow(meRow,true):""}
+  ${R.rows.length>10?`<button class="lball" data-lball="1">${LB.all?"Show top 10":"Show all "+R.rows.length+" players"}</button>`:""}</div>
+  ${R.out.length?`<div class="tm lbq">${R.out.length} player${R.out.length===1?" isn't":"s aren't"} ranked in this view yet (not enough settled bets).</div>`:""}`}
+ el.innerHTML=head+lbMe(R,users)+lbFilters()+list+`<div class="tm lbft">${d?`Updated ${lbAgo(Date.parse(d.at))} · checked every 30 minutes`:""}${LB.err&&d?" · "+esc(LB.err):""}</div>
+ <details class="card lbhow"><summary>How it's calculated</summary><div class="tm">
+ <p><b>Only placed bets count</b>, never a saved slip. Open bets show as pending and never count as profit.</p>
+ <p><b>Return:</b> won = stake × final odds (a void leg drops out of a multi's odds) · lost = $0 · cashed out = the amount you accepted · Miss-1-leg refund = your stake · void = your stake back.</p>
+ <p><b>Net profit</b> = returns − stakes. <b>ROI</b> = net profit ÷ amount staked × 100. <b>Win rate</b> = won ÷ (won + lost) × 100; cash-outs and refunds are neither. Void bets are left out of staked, returns, ROI, win rate and average odds.</p>
+ <p><b>Average odds</b> = the average decimal odds of settled bets other than voids (final odds for winners, placed odds otherwise). <b>Best win</b> = the largest profit from one bet. <b>Streak</b> = wins or losses in a row, by settlement time.</p>
+ <p><b>Periods</b> go by when a bet was settled. A multi counts under a sport only when all its legs are that sport.</p>
+ <p><b>Checks:</b> every result is rebuilt from official ESPN finals and box scores, so a bet counts as the result says, whatever a device recorded. A bet counts only if it was placed before its games started, wasn't changed afterwards, fits the stake you could afford, and any cash-out was taken before the bet was decided. Bets on games without official results yet are left out until they have them.</p></div></details>`}
+function lbChart(series){if(series.length<2)return`<div class="tm">Not enough settled bets for a chart yet.</div>`;const w=340,h=140,L=46,T=10,B=20,ax=v=>(v<0?"-":v>0?"+":"")+"$"+Math.round(Math.abs(v)),pts=[[series[0][0]-1,0],...series],xs=pts.map(p=>p[0]),ys=pts.map(p=>p[1]),x0=Math.min(...xs),x1=Math.max(...xs),lo=Math.min(0,...ys),hi=Math.max(0,...ys),pad=(hi-lo)*.1||5,y0=lo-pad,y1=hi+pad;
+ const X=t=>L+(t-x0)/((x1-x0)||1)*(w-L-6),Y=v=>T+(y1-v)/(y1-y0)*(h-T-B),d=pts.map((p,i)=>(i?"L":"M")+X(p[0]).toFixed(1)+" "+Y(p[1]).toFixed(1)).join(" "),end=ys[ys.length-1],c=end>=0?"var(--g)":"var(--r)";
+ return`<svg viewBox="0 0 ${w} ${h}" class="lbch" role="img" aria-label="Profit over time, now ${sgn(end)}"><line x1="${L}" x2="${w-6}" y1="${Y(0)}" y2="${Y(0)}" stroke="var(--line)" stroke-dasharray="3 3"/>
+ <text x="${L-6}" y="${Y(0)+3}" text-anchor="end" font-size="9" fill="var(--mut)">$0</text>${hi>0?`<text x="${L-6}" y="${Y(hi)+3}" text-anchor="end" font-size="9" fill="var(--mut)">${ax(hi)}</text>`:""}${lo<0?`<text x="${L-6}" y="${Y(lo)+3}" text-anchor="end" font-size="9" fill="var(--mut)">${ax(lo)}</text>`:""}
+ <path d="${d}" fill="none" stroke="${c}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/><circle cx="${X(x1)}" cy="${Y(end)}" r="3.5" fill="${c}"/>
+ <text x="${L}" y="${h-5}" font-size="9" fill="var(--mut)">${fd(x0+1)}</text><text x="${w-6}" y="${h-5}" text-anchor="end" font-size="9" fill="var(--mut)">${fd(x1)}</text></svg>`}
+function lbProfile(id){const d=LB.data,u=d&&d.users.find(x=>x.id===id);if(!u)return;const f={...LB.f,now:Date.now()},s=LBC.stats(u.recs,f),R=LBC.rank(d.users,f,LB.f.metric,+LB.f.min),hit=R.rows.find(x=>x.u===u),pf={period:LB.f.period,now:f.now};
+ const cell=(k,v,c)=>`<div class="sc"><small>${k}</small><b class="${c||""}">${v}</b></div>`,brk=(lab,q)=>`<div class="kv"><span><b>${lab}</b> <small class="tm">${q.settled} settled · ${q.w}W ${q.l}L · ${lbPct(q.roi,1)} ROI</small></span><b class="${q.net>0?"won":q.net<0?"lost":""}">${sgn(q.net)}</b></div>`;
+ const sps=lbSports().map(k=>[SP[k].n,LBC.stats(u.recs,{...pf,sport:k})]).filter(x=>x[1].settled),mix=LBC.stats(u.recs.filter(r=>r.p==="mix"),pf);
+ const res={w:["WON","won"],l:["LOST","lost"],c:["CASHED OUT",""],r:["REFUNDED",""],v:["VOID",""]};
+ $("#lbp").innerHTML=`<div class="mod lbpm" data-lbclose="1"><div class="mc lbpc" role="dialog" aria-label="${esc(dn(u.name))}'s profile"><button class="lbx0" data-lbclose="1" aria-label="Close">×</button>
+ <div class="ph"><div class="av">${esc(u.name[0].toUpperCase())}</div><div><div class="lbpn">${esc(dn(u.name))}</div><div class="tm">${hit?`Rank ${hit.rank} of ${R.rows.length} · `:"Not ranked in this view · "}${LB_MET[LB.f.metric]} · ${LB_PER[LB.f.period]}${LB.f.sport!=="all"?" · "+SP[LB.f.sport].n:""}${LB.f.type!=="all"?" · "+LB_TYP[LB.f.type]:""}</div></div></div>
+ <div class="sg lbsg">${cell("Net profit",sgn(s.net),s.net>0?"won":s.net<0?"lost":"")}${cell("ROI",lbPct(s.roi,1))}${cell("Win rate",lbPct(s.wr))}${cell("Settled bets",s.settled)}${cell("Won",s.w,"won")}${cell("Lost",s.l,"lost")}${cell("Void",s.v+(s.vl?` <small>(${s.vl} leg${s.vl===1?"":"s"})</small>`:""))}${cell("Cashed out",s.c)}${cell("Staked",$$(s.staked))}${cell("Returns",$$(s.ret))}${cell("Average odds",s.avg?f2(s.avg):"–")}${cell("Best win",s.best!==null?"+"+$$(s.best):"–")}${cell("Current streak",lbStreak(s))}${cell("Pending",s.pending)}</div>
+ <h2>Profit over time</h2>${lbChart(s.series)}
+ <h2>By sport</h2><div class="card">${sps.length||mix.settled?sps.map(([n,q])=>brk(n,q)).join("")+(mix.settled?brk("Mixed-sport multis",mix):""):`<div class="tm">No settled bets in this period.</div>`}</div>
+ <h2>Singles and multis</h2><div class="card">${brk("Singles",LBC.stats(u.recs,{...pf,type:"single"}))}${brk("Multis",LBC.stats(u.recs,{...pf,type:"multi"}))}</div>
+ <h2>Recent results</h2>${u.prof?(u.recent&&u.recent.length?`<div class="card">${u.recent.map(b=>`<div class="lbrc"><div><span class="chip ${res[b.x][1]}">${res[b.x][0]}</span><small class="tm">${fd(b.s)} · ${b.legs.length>1?b.legs.length+"-leg multi":"Single"} @ ${f2(b.o)}</small></div><div class="lbrl">${b.legs.map(l=>`<span class="${l.r==="w"?"won":l.r==="l"?"lost":""}">${esc(l.d)}</span>`).join("")}</div><b class="${b.r-b.k>0?"won":b.r-b.k<0?"lost":""}">${sgn(Math.round((b.r-b.k)*100)/100)}</b></div>`).join("")}</div>`:`<div class="tm">No settled bets yet.</div>`):`<div class="card tm">${esc(dn(u.name))} keeps their bet history private. Totals above are still checked and ranked.</div>`}
+ </div></div>`;LB.open=id}
+const _renderLB=render;render=function(m){_renderLB(m);const on=pg==="lb",el=$("#lb");if(!el)return;["#nlb","#blb"].forEach(q=>{const b=$(q);if(b)b.className=on?"on":""});
+ if(!on){el.style.display="none";LB.shown=false;return}el.style.display="block";$("main").style.display="none";$("#pf").style.display="none";$("#pl").style.display="none";
+ if(!LB.shown){LB.shown=true;lbPaint();lbLoad()}};
+document.addEventListener("click",e=>{const t=e.target;if(!t||!t.closest)return;
+ const u=t.closest("[data-lbu]");if(u){lbProfile(u.dataset.lbu);return}
+ if(t.closest(".lbpc")&&!t.closest("[data-lbclose].lbx0"))return;if(t.closest("[data-lbclose]")){$("#lbp").innerHTML="";LB.open=null;return}
+ if(t.closest("[data-lbref]")){lbLoad(true);return}if(t.closest("[data-lball]")){LB.all=!LB.all;lbPaint();return}
+ if(t.closest("[data-lbjoin]")){const st=lbSet();st.on=true;if(st.prof===undefined)st.prof=true;save();lbSync(true);toast("You've joined. You'll appear at the next check, within 30 minutes.");pg==="lb"?lbPaint():render();return}
+ if(t.closest("[data-lbleave]")){lbLeave().then(()=>{toast("You've left the leaderboard. Your public copy is deleted and you'll drop off at the next check.");pg==="lb"?lbPaint():render()});return}});
+document.addEventListener("change",e=>{const t=e.target;if(!t)return;if(t.dataset.lbf){LB.f[t.dataset.lbf]=t.value;LB.all=false;lbPaint();return}
+ if(t.dataset.lbprof){lbSet().prof=t.checked;save();lbSync(true);toast(t.checked?"Your bet history is shown on your public profile.":"Your bet history is hidden. You stay ranked with your totals.");if(pg==="lb")lbPaint()}});
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&LB.open){$("#lbp").innerHTML="";LB.open=null}});
+/* your own profile uses the same rules as the leaderboard */
+const _profLB=prof;prof=function(){const o=_profLB(),s=LBC.stats(myRecs());o.np=s.net;o.stake=s.staked;o.ret=s.ret;o.w=s.w;o.l=s.l;o.best=s.best||0;o.streak=s.streak?(s.streak.k==="w"?"W":"L")+s.streak.n:"–";return o};
+const _renderProfileLB=renderProfile;renderProfile=function(){_renderProfileLB();const pf=$("#pf");if(!pf)return;const st=lbSet();
+ pf.insertAdjacentHTML("beforeend",`<div class="card lbpf"><h2>Leaderboard</h2>${!LB_SITE()?`<div class="tm">The leaderboard is on the public site (sidelinesportsbook.github.io/sideline).</div>`:st.on?`<div class="lbctl"><label class="lbsw"><input type="checkbox" data-lbprof="1"${st.prof?" checked":""}> Show my bet history on my public profile</label><button class="lnk" data-lbleave="1">Leave the leaderboard</button></div><div class="tm">You're on the leaderboard. Others see your username and checked results${st.prof?", and your recent settled bets":""}. Never your balance, open slip, password or login details.</div>`:`<div class="tm">You're not on the leaderboard, so your results are private.</div><button class="go" data-lbjoin="1">Join the leaderboard</button>`}<button class="lnk" data-pg="lb">Open the leaderboard</button></div>`)};
