@@ -12,7 +12,7 @@
  showGate=function(){if(UID){$("#gate").innerHTML="";return}if(!booted)return;const c=mode==="create",pre=S.name||"";
   $("#gate").innerHTML=`<div class="mod gate"><div class="mc"><div class="logo" style="justify-content:center">Sideline</div>
   <div class="atabs"><button data-cmode="login" class="${c?"":"on"}">Log in</button><button data-cmode="create" class="${c?"on":""}">Create account</button></div>
-  <div class="tm gsub">${c?(pre?`Add a password to <b>${esc(dn(pre))}</b> to keep your bets and use your account on any device.`:"Pick a username and password. Log in with them on any phone or computer."):"Log in with your username and password, on any device."}</div>
+  <div class="tm gsub">${c?(pre?`Add a password to <b>${esc(dn(pre))}</b> to keep your bets and use your account on any device.`:"Pick a username and password. Log in with them on any phone or computer. Every player is ranked on the public leaderboard by username, with their checked results."):"Log in with your username and password, on any device."}</div>
   <input id="un" placeholder="Username" maxlength="16" autocomplete="username" autocapitalize="off" spellcheck="false" value="${c?esc(pre):""}">
   <input id="pw" type="password" placeholder="Password" maxlength="64" autocomplete="${c?"new-password":"current-password"}">
   ${c?'<input id="pw2" type="password" placeholder="Confirm password" maxlength="64" autocomplete="new-password">':""}

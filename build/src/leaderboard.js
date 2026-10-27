@@ -1,6 +1,6 @@
 /* ---------- Leaderboard ----------
-   Every signed-in player is on the leaderboard automatically (told once, the first time), until they choose Leave in their profile or on the
-   Leaderboard page; S.lb.out remembers that choice and they can rejoin any time. While on it, this device keeps a public copy
+   Every account is on the leaderboard, always (told at sign-up and once in the app); there is no leaving. Players can only
+   hide their bet history, which keeps them ranked on their totals. This device keeps a public copy
    of the account's bets in lb/<account id> (Firestore rules: anyone may read it, only that signed-in account may write it,
    under its own username). Every 30 minutes GitHub's servers check those bets against the official results and publish
    leaderboard.json (lb-agg.js + lbcore.js); this page ranks from that file with the same engine, so the rankings, public
@@ -8,7 +8,7 @@
    ranked with your totals, without your bet history. */
 const LB={data:null,at:0,err:"",busy:false,all:false,open:null,myId:"",pub:"",f:{period:"all",metric:"net",sport:"all",type:"all",min:10}};
 const LB_SITE=()=>!!window.SL_CLOUD&&!!window.SL_FS,LB_ART=()=>!!window.claude&&!window.SL_CLOUD;   /* LB_ART: the Claude version, which has no leaderboard of its own */
-const lbSet=()=>{const s=S.lb||(S.lb={prof:true});s.on=!s.out;if(s.prof===undefined)s.prof=true;return s};
+const lbSet=()=>{const s=S.lb||(S.lb={prof:true});s.on=true;delete s.out;if(s.prof===undefined)s.prof=true;return s};
 /* settled-at times: stamped when a bet settles, so period filters use when it was decided, not when it was placed */
 const _settleLB=settleAll;settleAll=function(){const open=S.bets.filter(b=>b.st==="open");_settleLB();let ch=false;
  open.forEach(b=>{if(b.st!=="open"&&!b.sat){b.sat=b.co&&b.co.t||Date.now();ch=true}});if(ch)save()};
@@ -25,7 +25,6 @@ async function lbSync(force){if(!LB_SITE()||!UID||!S.name||!lbSet().on)return;
  try{await window.SL_FS.doc("lb/"+UID).set({name:S.name,prof:!!S.lb.prof,v:1,upd:firebase.firestore.FieldValue.serverTimestamp(),j});LB.pub="ok"}
  catch(e){LBSIG="";LB.pub="err";slog("lb","publish failed: "+(e&&e.code||e))}if(pg==="lb")lbPaint()}
 setInterval(()=>lbSync(),5000);
-async function lbLeave(){S.lb.out=true;S.lb.on=false;save();LBSIG="";try{await window.SL_FS.doc("lb/"+UID).delete()}catch(e){}}
 (async()=>{for(let k=0;k<60&&!UID;k++)await new Promise(r=>setTimeout(r,1000));if(!UID||!crypto.subtle)return;
  const h=await crypto.subtle.digest("SHA-256",new TextEncoder().encode("sideline:"+UID));LB.myId=[...new Uint8Array(h)].map(x=>x.toString(16).padStart(2,"0")).join("").slice(0,16);if(pg==="lb")lbPaint()})();
 async function lbLoad(force){if(LB_ART())return;if(LB.busy||(!force&&LB.data&&Date.now()-LB.at<12e4))return;LB.busy=true;lbPaint();
@@ -52,9 +51,8 @@ function lbMe(R,users){const st=lbSet(),f={...LB.f,now:Date.now()},mine=LBC.stat
  const box=(h,body)=>`<div class="card lbme"><div class="lbmh">${h}</div>${body}</div>`;
  const mini=s=>`<div class="lbms"><div><small>Net</small><b class="${s.net>0?"won":s.net<0?"lost":""}">${sgn(s.net)}</b></div><div><small>ROI</small><b>${lbPct(s.roi,1)}</b></div><div><small>Win rate</small><b>${lbPct(s.wr)}</b></div><div><small>Settled</small><b>${s.settled}</b></div></div>`;
  if(!LB_SITE())return box(`<b>Your stats</b>`,mini(mine)+`<div class="tm">To join the leaderboard, log in on the public site: sidelinesportsbook.github.io/sideline</div>`);
- if(!st.on)return box(`<b>You left the leaderboard</b>`,mini(mine)+`<div class="tm">Your numbers above are private. Rejoining shares your username and your bets so they can be checked against official results and ranked. You can hide your bet history or leave again at any time.</div><button class="go" data-lbjoin="1">Rejoin the leaderboard</button>`);
  const me=users.find(u=>u.id&&u.id===LB.myId),hit=me&&R.rows.find(x=>x.u===me),N=R.rows.length;
- const ctl=`<div class="lbctl"><label class="lbsw"><input type="checkbox" data-lbprof="1"${st.prof?" checked":""}> Show my bet history on my public profile</label><button class="lnk" data-lbleave="1">Leave the leaderboard</button></div>${LB.pub==="err"?`<div class="tm lost">Couldn't share your bets just now. It will try again automatically.</div>`:""}`;
+ const ctl=`<div class="lbctl"><label class="lbsw"><input type="checkbox" data-lbprof="1"${st.prof?" checked":""}> Show my bet history on my public profile</label></div>${LB.pub==="err"?`<div class="tm lost">Couldn't share your bets just now. It will try again automatically.</div>`:""}`;
  if(!me)return box(`<b>You're on the leaderboard</b><span class="tm">You'll appear after the next check (every 30 minutes).</span>`,mini(mine)+ctl);
  const s=hit?hit.s:LBC.stats(me.recs,f),need=LB.f.metric==="roi"?LB.f.min-s.counted:LB.f.metric==="wr"?LB.f.min-(s.w+s.l):1-s.counted,wait=(me.pend||0)+(me.unv||0);
  return box(hit?`<span class="lbk${hit.rank<=3?" lbt"+hit.rank:""}">${hit.rank}</span><b>Your rank: ${hit.rank} of ${N}</b><span class="tm">${LB_MET[LB.f.metric]} · ${LB_PER[LB.f.period]}</span>`:`<b>Not ranked yet</b><span class="tm">${need>0?`${need} more ${LB.f.metric==="wr"?"won or lost":"settled"} bet${need===1?"":"s"} to qualify`:"No settled bets in this view"}</span>`,
@@ -105,16 +103,15 @@ document.addEventListener("click",e=>{const t=e.target;if(!t||!t.closest)return;
  const u=t.closest("[data-lbu]");if(u){lbProfile(u.dataset.lbu);return}
  if(t.closest(".lbpc")&&!t.closest("[data-lbclose].lbx0"))return;if(t.closest("[data-lbclose]")){$("#lbp").innerHTML="";LB.open=null;return}
  if(t.closest("[data-lbref]")){lbLoad(true);return}if(t.closest("[data-lball]")){LB.all=!LB.all;lbPaint();return}
- if(t.closest("[data-lbjoin]")){const st=lbSet();st.out=false;st.on=true;save();lbSync(true);toast("You're back on the leaderboard. You'll appear at the next check, within 30 minutes.");pg==="lb"?lbPaint():render();return}
- if(t.closest("[data-lbleave]")){lbLeave().then(()=>{toast("You've left the leaderboard. Your public copy is deleted and you'll drop off at the next check.");pg==="lb"?lbPaint():render()});return}});
+});
 document.addEventListener("change",e=>{const t=e.target;if(!t)return;if(t.dataset.lbf){LB.f[t.dataset.lbf]=t.value;LB.all=false;lbPaint();return}
  if(t.dataset.lbprof){lbSet().prof=t.checked;save();lbSync(true);toast(t.checked?"Your bet history is shown on your public profile.":"Your bet history is hidden. You stay ranked with your totals.");if(pg==="lb")lbPaint()}});
 document.addEventListener("keydown",e=>{if(e.key==="Escape"&&LB.open){$("#lbp").innerHTML="";LB.open=null}});
 /* your own profile uses the same rules as the leaderboard */
 const _profLB=prof;prof=function(){const o=_profLB(),s=LBC.stats(myRecs());o.np=s.net;o.stake=s.staked;o.ret=s.ret;o.w=s.w;o.l=s.l;o.best=s.best||0;o.streak=s.streak?(s.streak.k==="w"?"W":"L")+s.streak.n:"–";return o};
 const _renderProfileLB=renderProfile;renderProfile=function(){_renderProfileLB();const pf=$("#pf");if(!pf)return;const st=lbSet();
- pf.insertAdjacentHTML("beforeend",`<div class="card lbpf"><h2>Leaderboard</h2>${!LB_SITE()?`<div class="tm">The leaderboard is on the public site (sidelinesportsbook.github.io/sideline).</div>`:st.on?`<div class="lbctl"><label class="lbsw"><input type="checkbox" data-lbprof="1"${st.prof?" checked":""}> Show my bet history on my public profile</label><button class="lnk" data-lbleave="1">Leave the leaderboard</button></div><div class="tm">You're on the leaderboard. Others see your username and checked results${st.prof?", and your recent settled bets":""}. Never your balance, open slip, password or login details.</div>`:`<div class="tm">You left the leaderboard, so your results are private.</div><button class="go" data-lbjoin="1">Rejoin the leaderboard</button>`}<button class="lnk" data-pg="lb">Open the leaderboard</button></div>`)};
-/* the one-time notice: everyone is told they're on the leaderboard, with the way to leave or hide their history */
-setInterval(()=>{if(!LB_SITE()||!UID||!S.name||$("#lbnote"))return;const st=lbSet();if(!st.on||st.told)return;st.told=Date.now();save();
- document.body.insertAdjacentHTML("beforeend",`<div id="lbnote" class="lbnote" role="status"><span><b>You're on the leaderboard.</b> Your username and checked results are ranked with other players. You can hide your bet history or leave in your profile.</span><button data-lbnote="pf">Settings</button><button data-lbnote="ok" aria-label="Dismiss">OK</button></div>`)},2000);
+ pf.insertAdjacentHTML("beforeend",`<div class="card lbpf"><h2>Leaderboard</h2>${!LB_SITE()?`<div class="tm">The leaderboard is on the public site (sidelinesportsbook.github.io/sideline).</div>`:`<div class="lbctl"><label class="lbsw"><input type="checkbox" data-lbprof="1"${st.prof?" checked":""}> Show my bet history on my public profile</label></div><div class="tm">Every player is on the leaderboard. Others see your username and checked results${st.prof?", and your recent settled bets":""}. Never your balance, open slip, password or login details.</div>`}<button class="lnk" data-pg="lb">Open the leaderboard</button></div>`)};
+/* the one-time notice: everyone is told they're on the leaderboard, and how to hide their bet history */
+setInterval(()=>{if(!LB_SITE()||!UID||!S.name||$("#lbnote"))return;const st=lbSet();if(st.told)return;st.told=Date.now();save();
+ document.body.insertAdjacentHTML("beforeend",`<div id="lbnote" class="lbnote" role="status"><span><b>You're on the leaderboard.</b> Every player's username and checked results are ranked. You can hide your bet history in your profile.</span><button data-lbnote="pf">Settings</button><button data-lbnote="ok" aria-label="Dismiss">OK</button></div>`)},2000);
 document.addEventListener("click",e=>{const b=e.target&&e.target.closest&&e.target.closest("[data-lbnote]");if(!b)return;const n=$("#lbnote");if(n)n.remove();if(b.dataset.lbnote==="pf"){pg="pf";view=null;render();scrollTo(0,0)}});
