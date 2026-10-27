@@ -119,7 +119,7 @@ function renderPast(){const el=$("#past");if(!el)return;const now=Date.now(),q=P
  el.innerHTML=`<div class="pgh"><h2>Past games</h2><div class="tm">Finished in the last 24 hours · your time zone (${esc(tz())})${upd?` · results from ESPN, updated ${upd}`:""}${stale&&upd?' · <b class="lost">ESPN not reachable right now, showing the last saved results</b>':""}</div></div>
  <div class="pst">${chip("","All")}${Object.keys(LGN).map(k=>chip(k,LGN[k])).join("")}</div>
  <div class="pgf"><input id="pgq" placeholder="Search a team" value="${esc(PGF.q)}" autocomplete="off"><select id="pgb">${opt("","All games")}${opt("mine","Games I bet on")}${opt("won","Bets won")}${opt("lost","Bets lost")}${opt("open","Bets pending")}${opt("ref","Refunded or void")}${opt("cash","Cashed out")}</select></div>
- <div class="pgl">${rows.map(({x,bs})=>pastCard(x,bs)).join("")||`<div class="card cempty pge">${EVAT||Object.keys(EVM).length?"No games match these filters in the last 24 hours.":"Loading results from ESPN…"}</div>`}</div>
+ <div class="pgl">${rows.map(({x,bs})=>pastCard(x,bs)).join("")||(EVAT||Object.keys(EVM).length?`<div class="card cempty pge">No games match these filters in the last 24 hours.</div>`:skel(118,118,118,118)+`<div class="tm note">Loading results from ESPN…</div>`)}</div>
  <div class="tm pgnote">Completion times are ESPN's official game clock (last play or final whistle). Where ESPN hasn't published one yet, the end is estimated from the start time and marked approx.</div>`;
  const qi=$("#pgq");qi.oninput=()=>{PGF.q=qi.value;renderPast()};$("#pgb").onchange=e=>{PGF.bo=e.target.value;renderPast()};
  if(foc!==null){const n=$("#pgq");n.focus();n.setSelectionRange(foc,foc)}}

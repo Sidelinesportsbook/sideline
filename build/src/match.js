@@ -54,7 +54,7 @@ function renderMatch(g,m){const mc=MC[m.id],err=MCERR[m.id],bs=mBets(m,g),soc=m.
   <div class="mhi"><span>${fmt(m.ts)}</span>${live?`<span>${mc?"Box score updated "+new Date(mc.at).toLocaleTimeString([],{hour:"numeric",minute:"2-digit",second:"2-digit"}):"Loading live box score…"}${MCF[m.id]?" · ESPN slow to respond, retrying":""}</span>`:""}${!live&&e.ok?`<span>Finished ${new Date(e.t).toLocaleTimeString([],{hour:"numeric",minute:"2-digit"})}</span>`:""}${mc&&mc.info.venue?`<span>${esc(mc.info.venue)}</span>`:""}${isAET(m)&&m.reg?`<span>90 min: ${m.reg[0]} – ${m.reg[1]}</span>`:""}</div></div>`;
  const back=MFROM==="past"?`<button class="back" data-pback="1">‹ Back to Past games</button>`:`<button class="back" data-back="1">‹ Back</button>`;
  let body;
- if(!mc&&!err)body=`<div class="card mload"><span class="spn"></span>Loading the full box score from ESPN…</div>`;
+ if(!mc&&!err)body=skel([20,"30%"],96,[20,"24%"],200,120)+`<div class="tm note">Loading the full match from ESPN…</div>`;
  else if(MTAB==="bets")body=mBetsTab(m,g,bs);
  else if(!mc)body=`<div class="card"><div class="msg">Couldn't reach ESPN for the full box score (offline or blocked). ${live?"Live player stats from the shared feed":"The final score and saved player stats"} are below.</div></div>${boxTable(m,RP[g.id]||LRP[g.id]||(lv&&lv.p)||{})}`;
  else if(MTAB==="ov")body=mOverview(m,mc,g,bs);

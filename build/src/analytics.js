@@ -122,8 +122,22 @@ function rolling(gs,win,pct){return gs.map((g,i)=>{if(i+1<win)return null;const 
 /* ---------- NBA player: Shot chart, Trends and Splits tabs (the Overview is the existing page) ---------- */
 var PSTATS=[["pts","Points",r=>+r[5]],["reb","Rebounds",r=>+r[6]],["ast","Assists",r=>+r[7]],["tpm","3PM",r=>+r[8]],["pra","PRA",r=>+r[5]+ +r[6]+ +r[7]],["min","Minutes",r=>+r[4]],["fgp","FG%",null,r=>[+r[12],+r[13]]],["tpp","3P%",null,r=>[+r[8],+r[14]]],["stl","Steals",r=>+r[9]],["blk","Blocks",r=>+r[10]],["to","Turnovers",r=>+r[11]]];
 function plTabs(cur,soc){return`<div class="tabs mtabs ptb">${[["ov","Overview"],["sh",soc?"Shot map":"Shot chart"],["tr","Trends"],["sp","Splits"]].map(([k,l])=>`<button data-pt="${k}" class="${cur===k?"on":""}">${l}</button>`).join("")}</div>`}
-function paSkel(t){return`<div class="skl" style="height:${t||300}px"></div><div class="tm note">Loading this season's play-by-play…</div>`}
-function nbaAnalytics(n,p,pt){if(!p.c27&&!(PA[String(p.id)]||{}).lg)return`<div class="cempty">${esc(n)} hasn't played a game this season yet.</div>`;const d=paGet(String(p.id),()=>paFallback(p)),lg=paGet("league");
+function paSkel(t){return skel([30,"62%"],[22,"40%"],t||300,[16,"86%"],[16,"70%"])+`<div class="tm note">Loading this season's data from ESPN…</div>`}
+function nbaAnalytics(n,p,pt){if(!p.c27&&!(PA[String(p.id)]||{}).lg)return`<div class="cempty">${esc(n)} hasn't played a game this season yet.</div>`;const d=paGet(String(p.id),()=>paFallback(p)),lg=/* ---------- team colours: each side's own colours on match pages, profiles and charts ----------
+   Official colours (NBA team data, ESPN club colours) through teamColour(), which skips a colour too dark to see. When the
+   two teams' colours are close (e.g. two reds) the away side switches to its second colour; if they still clash, both fall
+   back to the neutral pair so the two are never confused. */
+function tPair(h,a){const ch=teamColour(h),c1=teamColour(a),c2=teamColour(a,1);if(!ch||!c1)return[null,null];if(colDist(ch,c1)>=90)return[ch,c1];if(c2&&colDist(ch,c2)>=90)return[ch,c2];return[null,null]}
+const _rgTeamCol=renderGames;renderGames=function(){_rgTeamCol.apply(this,arguments);const el=$("#games");if(!el)return;const g=view&&GM[view],P=["--th","--ta","--tl","--tr"];
+ if(!g){P.forEach(p=>el.style.removeProperty(p));return}const[ch,ca]=tPair(g.h,g.a);if(!ch){P.forEach(p=>el.style.removeProperty(p));return}
+ el.style.setProperty("--th",ch);el.style.setProperty("--ta",ca);const nba=g.sp==="nba";el.style.setProperty("--tl",nba?ca:ch);el.style.setProperty("--tr",nba?ch:ca)};
+/* match charts are drawn at the page's width: redraw them when the window changes size (rotating a phone) */
+addEventListener("resize",(()=>{let tm=0,w=innerWidth;return()=>{clearTimeout(tm);tm=setTimeout(()=>{if(Math.abs(innerWidth-w)<40)return;w=innerWidth;if(view&&pg==="bets")renderGames()},250)}})());
+/* a profile sheet carries its team's colour (--tc) for the header strip and chart bars */
+function sheetCol(html,team){const c=teamColour(team);return c?html.replace('class="mc ps"',`class="mc ps tcs" style="--tc:${c}"`):html}
+/* loading placeholders shaped like what's coming, so nothing jumps when it arrives */
+function skel(...h){return`<div class="skw" aria-busy="true">${h.map(x=>typeof x==="number"?`<div class="sk" style="height:${x}px"></div>`:`<div class="sk" style="height:${x[0]}px;width:${x[1]}"></div>`).join("")}</div>`}   /* a function, so pages drawn before this file runs can use it */
+paGet("league");
  if(!d)return paSkel();if(d.err)return`<div class="cempty">Couldn't load ${esc(n)}'s play-by-play right now. The Overview tab still has the season averages and game log.</div>`;
  const rows=(d.lg||[]).map(r=>r.split("|")),src=d.fb?`read directly from ESPN for the last ${d.fbn} games (the full season is on the public site)`:`ESPN play-by-play, ${rows.length} game${rows.length===1?"":"s"} this season, updated ${fmt(Date.parse(d.at))}`;
  if(!rows.length)return`<div class="cempty">No games played this season yet.</div>`;
@@ -177,7 +191,21 @@ function tAgg(gs){const n=gs.length,S=f=>gs.reduce((s,g)=>s+f(g),0);if(!n)return
   tpm:S(g=>g.tp[0])/n,otpm:S(g=>g.otp[0])/n,reb:S(g=>g.reb)/n,oreb:S(g=>g.oreb2)/n,orb:S(g=>g.oreb)/n,oorb:S(g=>g.ooreb)/n,ast:S(g=>g.ast)/n,oast:S(g=>g.oast)/n,to:S(g=>g.to)/n,oto:S(g=>g.oto)/n,stl:S(g=>g.stl)/n,ostl:S(g=>g.ostl)/n,blk:S(g=>g.blk)/n,oblk:S(g=>g.oblk)/n,
   pip:S(g=>g.pip)/n,opip:S(g=>g.opip)/n,fbp:S(g=>g.fbp)/n,ofbp:S(g=>g.ofbp)/n,ortg:poss?S(g=>g.pf)/poss*100:null,drtg:oposs?S(g=>g.pa)/oposs*100:null,pace:S(g=>g.pace)/n}}
 var TSTATS=[["pf","Points scored",g=>g.pf],["pa","Points allowed",g=>g.pa],["mg","Margin",g=>g.pf-g.pa],["ortg","Off rating",g=>g.poss?Math.round(g.pf/g.poss*1000)/10:null],["drtg","Def rating",g=>g.oposs?Math.round(g.pa/g.oposs*1000)/10:null],["fgp","FG%",null,g=>g.fg],["tpp","3P%",null,g=>g.tp],["pace","Pace",g=>Math.round(g.pace*10)/10]];
-function nbaTeamAnalytics(k){const d=paGet("t"+k.id),lg=paGet("league");
+function nbaTeamAnalytics(k){const d=paGet("t"+k.id),lg=/* ---------- team colours: each side's own colours on match pages, profiles and charts ----------
+   Official colours (NBA team data, ESPN club colours) through teamColour(), which skips a colour too dark to see. When the
+   two teams' colours are close (e.g. two reds) the away side switches to its second colour; if they still clash, both fall
+   back to the neutral pair so the two are never confused. */
+function tPair(h,a){const ch=teamColour(h),c1=teamColour(a),c2=teamColour(a,1);if(!ch||!c1)return[null,null];if(colDist(ch,c1)>=90)return[ch,c1];if(c2&&colDist(ch,c2)>=90)return[ch,c2];return[null,null]}
+const _rgTeamCol=renderGames;renderGames=function(){_rgTeamCol.apply(this,arguments);const el=$("#games");if(!el)return;const g=view&&GM[view],P=["--th","--ta","--tl","--tr"];
+ if(!g){P.forEach(p=>el.style.removeProperty(p));return}const[ch,ca]=tPair(g.h,g.a);if(!ch){P.forEach(p=>el.style.removeProperty(p));return}
+ el.style.setProperty("--th",ch);el.style.setProperty("--ta",ca);const nba=g.sp==="nba";el.style.setProperty("--tl",nba?ca:ch);el.style.setProperty("--tr",nba?ch:ca)};
+/* match charts are drawn at the page's width: redraw them when the window changes size (rotating a phone) */
+addEventListener("resize",(()=>{let tm=0,w=innerWidth;return()=>{clearTimeout(tm);tm=setTimeout(()=>{if(Math.abs(innerWidth-w)<40)return;w=innerWidth;if(view&&pg==="bets")renderGames()},250)}})());
+/* a profile sheet carries its team's colour (--tc) for the header strip and chart bars */
+function sheetCol(html,team){const c=teamColour(team);return c?html.replace('class="mc ps"',`class="mc ps tcs" style="--tc:${c}"`):html}
+/* loading placeholders shaped like what's coming, so nothing jumps when it arrives */
+function skel(...h){return`<div class="skw" aria-busy="true">${h.map(x=>typeof x==="number"?`<div class="sk" style="height:${x}px"></div>`:`<div class="sk" style="height:${x[0]}px;width:${x[1]}"></div>`).join("")}</div>`}   /* a function, so pages drawn before this file runs can use it */
+paGet("league");
  if(!d)return paSkel(360);if(d.err)return`<div class="cempty">${window.claude&&!window.SL_CLOUD?"Team analytics are on the public site (sidelinesportsbook.github.io/sideline).":"Couldn't load this team's analytics right now. Try again in a minute."}</div>`;
  const gs=(d.g||[]).map(tGame);if(!gs.length)return`<div class="cempty">No games played this season yet.</div>`;
  const A=tAgg(gs),L5=gs.length>5?tAgg(gs.slice(0,5)):null,P=v=>v==null?"–":v.toFixed(1),D=(v,lo)=>v==null?"":`<small class="${(lo?-v:v)>0?"won":(lo?-v:v)<0?"lost":""}">${v>0?"+":""}${v.toFixed(1)}</small>`;
@@ -378,4 +406,18 @@ document.addEventListener("click",e=>{const t=e.target;if(!t||!t.closest||!SHEET
 document.addEventListener("change",e=>{const s=e.target;if(!s||!s.matches||!SHEET)return;if(s.matches("[data-ssfg]")){(SHEET.ss=SHEET.ss||{}).g=s.value;openPlayer(SHEET.n)}else if(s.matches("[data-tsfg]")){(SHEET.ts2=SHEET.ts2||{}).g=s.value;openTeam(SHEET.n,SHEET.tab)}},true);
 document.addEventListener("click",e=>{const t=e.target;if(!t||!t.closest)return;const b=t.closest("[data-sot]");if(b){e.stopPropagation();SOCT=b.dataset.sot;renderGames();return}
  const s=t.closest("[data-sss]");if(s){e.stopPropagation();MSC.ss=s.dataset.sss;renderGames()}},true);
+/* ---------- team colours: each side's own colours on match pages, profiles and charts ----------
+   Official colours (NBA team data, ESPN club colours) through teamColour(), which skips a colour too dark to see. When the
+   two teams' colours are close (e.g. two reds) the away side switches to its second colour; if they still clash, both fall
+   back to the neutral pair so the two are never confused. */
+function tPair(h,a){const ch=teamColour(h),c1=teamColour(a),c2=teamColour(a,1);if(!ch||!c1)return[null,null];if(colDist(ch,c1)>=90)return[ch,c1];if(c2&&colDist(ch,c2)>=90)return[ch,c2];return[null,null]}
+const _rgTeamCol=renderGames;renderGames=function(){_rgTeamCol.apply(this,arguments);const el=$("#games");if(!el)return;const g=view&&GM[view],P=["--th","--ta","--tl","--tr"];
+ if(!g){P.forEach(p=>el.style.removeProperty(p));return}const[ch,ca]=tPair(g.h,g.a);if(!ch){P.forEach(p=>el.style.removeProperty(p));return}
+ el.style.setProperty("--th",ch);el.style.setProperty("--ta",ca);const nba=g.sp==="nba";el.style.setProperty("--tl",nba?ca:ch);el.style.setProperty("--tr",nba?ch:ca)};
+/* match charts are drawn at the page's width: redraw them when the window changes size (rotating a phone) */
+addEventListener("resize",(()=>{let tm=0,w=innerWidth;return()=>{clearTimeout(tm);tm=setTimeout(()=>{if(Math.abs(innerWidth-w)<40)return;w=innerWidth;if(view&&pg==="bets")renderGames()},250)}})());
+/* a profile sheet carries its team's colour (--tc) for the header strip and chart bars */
+function sheetCol(html,team){const c=teamColour(team);return c?html.replace('class="mc ps"',`class="mc ps tcs" style="--tc:${c}"`):html}
+/* loading placeholders shaped like what's coming, so nothing jumps when it arrives */
+function skel(...h){return`<div class="skw" aria-busy="true">${h.map(x=>typeof x==="number"?`<div class="sk" style="height:${x}px"></div>`:`<div class="sk" style="height:${x[0]}px;width:${x[1]}"></div>`).join("")}</div>`}   /* a function, so pages drawn before this file runs can use it */
 paGet("league");

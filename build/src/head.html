@@ -416,15 +416,17 @@ header{background:color-mix(in srgb,var(--card) 82%,transparent)!important;-webk
  .lbms{grid-template-columns:repeat(2,minmax(0,1fr))}.sg.lbsg{grid-template-columns:repeat(2,minmax(0,1fr))!important}.lbf label{flex:1 1 calc(50% - 8px)}.lbk{width:28px;height:28px;font-size:15px}}
 </style>
 <style>/* analytics: shot charts, trends, splits, team dashboards, play-by-play */
-:root{--tB:#e0a458}@media (prefers-color-scheme:light){:root:not([data-theme="dark"]){--tB:#a8620f}}:root[data-theme="light"]{--tB:#a8620f}
+/* --lift: club colours are lightened on the dark theme and deepened on the light one, so they read on either background */
+:root{--tB:#e0a458;--lift:#fff}@media (prefers-color-scheme:light){:root:not([data-theme="dark"]){--tB:#a8620f;--lift:#000}}:root[data-theme="light"]{--tB:#a8620f;--lift:#000}
 .ptb{margin:12px 0 2px}.ptb button{font-size:14px;padding:9px 11px}
 .skl{border-radius:14px;background:linear-gradient(90deg,var(--raise),var(--line),var(--raise));background-size:200% 100%;animation:lbsk 1.2s ease-in-out infinite;margin:12px 0 6px}
 .ctw{max-width:560px;margin:8px auto 2px}.ctc{display:block;width:100%;height:auto;touch-action:pan-y}.ctbg{fill:var(--raise)}
 .ctl{fill:none;stroke:color-mix(in srgb,var(--mut) 55%,transparent);stroke-width:1.25}.ctl .ctb{stroke:var(--tx);stroke-width:2}.ctl .ctr{stroke:var(--tx);stroke-width:1.5}
 .shm{cursor:pointer}.shm .shh{fill:transparent}.shm .mk{fill:var(--ov);stroke:var(--card);stroke-width:1}.shm .mx{fill:none;stroke:var(--un);stroke-width:1.9;stroke-linecap:round}
 .shm.on .mk{stroke:var(--tx);stroke-width:2}.shm.on .mx{stroke-width:3}.ctc:has(.shm.on) .shm:not(.on){opacity:.4}
-.pitch .shm .sg-g{fill:var(--acc);stroke:var(--card);stroke-width:1.2}.pitch .shm .sg-o{fill:none;stroke:var(--acc);stroke-width:2.2}.pitch .shm .sg-b{fill:none;stroke:var(--acc);stroke-width:1.8;stroke-linejoin:round}.pitch .shm .mx{stroke:var(--acc)}
-.pitch .shm.a .sg-g{fill:var(--tB)}.pitch .shm.a .sg-o,.pitch .shm.a .sg-b,.pitch .shm.a .mx{stroke:var(--tB)}
+/* shot-map markers: on a match page each side in its own colour (shape shows the outcome); on a profile neutral, shots faced in amber */
+.pitch .shm{--mk:var(--acc)}.pitch .shm.h{--mk:color-mix(in srgb,var(--th,var(--acc)) 75%,var(--lift))}.pitch .shm.a{--mk:color-mix(in srgb,var(--ta,var(--tB)) 75%,var(--lift))}.ps .pitch .shm.a{--mk:var(--tB)}
+.pitch .shm .sg-g{fill:var(--mk);stroke:var(--card);stroke-width:1.2}.pitch .shm .sg-o{fill:none;stroke:var(--mk);stroke-width:2.2}.pitch .shm .sg-b{fill:none;stroke:var(--mk);stroke-width:1.8;stroke-linejoin:round}.pitch .shm .mx{stroke:var(--mk)}
 /* zones are opaque so a zone drawn over another (paint over mid-range) never mixes colours */
 :root{--zn2:color-mix(in srgb,var(--ov) 46%,var(--raise));--zn1:color-mix(in srgb,var(--ov) 22%,var(--raise));--zn0:color-mix(in srgb,var(--mut) 16%,var(--raise));--zm1:color-mix(in srgb,var(--un) 22%,var(--raise));--zm2:color-mix(in srgb,var(--un) 46%,var(--raise))}
 .zn{stroke:var(--card);stroke-width:1.5}.zn2{fill:var(--zn2)}.zn1{fill:var(--zn1)}.zn0{fill:var(--zn0)}.zm1{fill:var(--zm1)}.zm2{fill:var(--zm2)}.zne{fill:var(--raise)}
@@ -435,9 +437,10 @@ header{background:color-mix(in srgb,var(--card) 82%,transparent)!important;-webk
 .scleg .lz.zn2,.scleg .lz.zn1,.scleg .lz.zn0,.scleg .lz.zm1,.scleg .lz.zm2{border:1px solid var(--line)}.scleg .hgr i{width:70px;background:linear-gradient(90deg,color-mix(in srgb,var(--acc) 14%,transparent),var(--acc))}
 .scleg .lb{background:color-mix(in srgb,var(--acc) 60%,transparent)}.scleg .ll{height:2px;width:16px;background:var(--tx);border-radius:1px}.scleg .ld{height:2px;width:16px;background:repeating-linear-gradient(90deg,var(--tx) 0 5px,transparent 5px 8px);border-radius:0}
 .scleg .lna{border:1px dashed var(--mut)}.scleg .lo{border-radius:50%;border:2px solid var(--mut);width:10px;height:10px}.scleg .lt{width:0;height:0;border-left:6px solid transparent;border-right:6px solid transparent;border-bottom:10px solid var(--mut);border-radius:0}
-.scleg .lm.n{background:var(--mut)}.scleg .lx.n{color:var(--mut)}.scleg .lh{background:var(--acc);border-radius:50%;width:10px;height:10px}.scleg .la{background:var(--tB);border-radius:50%;width:10px;height:10px}
+.scleg .lm.n{background:var(--mut)}.scleg .lx.n{color:var(--mut)}.scleg .lh{background:var(--th,var(--acc));border-radius:50%;width:10px;height:10px}.scleg .la{background:var(--ta,var(--tB));border-radius:50%;width:10px;height:10px}
 .gbsp{flex:none;width:1px;align-self:stretch;margin:3px 6px;background:var(--line)}
 .scsel{background:var(--btn);border:1px solid var(--line);border-radius:7px;color:var(--tx);padding:3px 6px;font-size:12px;font-weight:600;max-width:170px;flex:none}
+/* chart bars stay neutral: a red or green club colour would read as a loss or a win */
 .gbr.tr{fill:color-mix(in srgb,var(--acc) 60%,transparent)}.gbb.on .gbr.tr{fill:var(--acc)}.trl{fill:none;stroke:var(--tx);stroke-width:2;stroke-linejoin:round;pointer-events:none}.trd{fill:var(--tx);stroke:var(--panel);stroke-width:1.5;pointer-events:none}
 .ztb td:first-child{white-space:nowrap}.qsp{padding:6px 14px}.qr{display:grid;grid-template-columns:minmax(84px,140px) 1fr 44px 56px;gap:10px;align-items:center;padding:7px 0;border-top:1px solid var(--line);font-size:12.5px}.qr:first-child{border-top:0}
 .qr b{font:700 15px var(--fd);text-align:right}.qr small{color:var(--mut);text-align:right}.qb{height:8px;border-radius:4px;background:var(--raise);overflow:hidden}.qb i{display:block;height:100%;background:var(--acc);border-radius:4px;transition:width .3s var(--ease)}
@@ -448,9 +451,23 @@ header{background:color-mix(in srgb,var(--card) 82%,transparent)!important;-webk
 .fst{display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:12px;color:var(--mut);margin:2px 2px 8px}.fst i{width:8px;height:8px;border-radius:50%;background:var(--mut);flex:none}.fst b{color:var(--tx);font-size:12px;letter-spacing:.4px;text-transform:uppercase}
 .fst.lv i{background:var(--un);animation:fstp 1.6s ease-in-out infinite}.fst.dl i{background:var(--tB)}.fst.fn i{background:var(--ov)}@keyframes fstp{50%{opacity:.35}}
 .mpr .pav{vertical-align:-4px;margin-right:2px}.pv{font-style:normal;font-size:10.5px;font-weight:800;color:var(--ov);margin-left:4px}.mev.sc span:nth-child(3){font-weight:600;color:var(--tx)}
-.gfh{fill:color-mix(in srgb,var(--acc) 22%,transparent)}.gfa{fill:color-mix(in srgb,var(--tB) 22%,transparent)}.gfl{stroke:var(--tx)!important;stroke-width:1.75!important}
-.gfk{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:-1px}.gfk.h{background:color-mix(in srgb,var(--acc) 60%,transparent)}.gfk.a{background:color-mix(in srgb,var(--tB) 60%,transparent)}
-@media(prefers-reduced-motion:reduce){.skl,.fst.lv i{animation:none}}
+/* dark club colours (navy, maroon) are lightened before use as a fill, so both sides stay visible on the dark background */
+.gfh{fill:color-mix(in srgb,color-mix(in srgb,var(--th,var(--acc)) 68%,var(--lift)) 34%,transparent)}.gfa{fill:color-mix(in srgb,color-mix(in srgb,var(--ta,var(--tB)) 68%,var(--lift)) 34%,transparent)}.gfl{stroke:var(--tx)!important;stroke-width:1.75!important}
+.gfk{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:-1px}.gfk.h{background:color-mix(in srgb,var(--th,var(--acc)) 68%,var(--lift))}.gfk.a{background:color-mix(in srgb,var(--ta,var(--tB)) 68%,var(--lift))}
+/* team colours: a two-colour strip on match headers (left team, right team) and the team's colour along the top of a profile */
+#games .mh,#games .card:has(>.hero){position:relative;overflow:hidden}
+#games .mh::before,#games .card:has(>.hero)::before{content:"";position:absolute;left:0;right:0;top:0;height:3px;background:linear-gradient(90deg,var(--tl,transparent) 0 50%,var(--tr,transparent) 50% 100%)}
+.ps.tcs{border-top:3px solid var(--tc)}.ps.tcs .ptb button.on,.ps.tcs .tabs button.on{border-bottom-color:var(--tc)}
+/* wide screens: a game card's three markets sit side by side (Head to head | Line | Total), each team's price under the other,
+   so a card is about half as tall and every price sits next to its label */
+@media(min-width:900px){#games .card:has(>.mk){display:grid;grid-template-columns:repeat(3,minmax(0,1fr));column-gap:10px;align-items:start}
+ #games .card:has(>.mk)>:not(.mk){grid-column:1/-1}#games .card>.mk{grid-template-columns:minmax(0,1fr);gap:5px;margin:8px 0 0}#games .card>.mk .ml{font-size:10.5px}
+ #games .card>.mk .bs{flex-direction:column;gap:6px}#games .card>.mk .o{width:100%}}
+/* numbers line up in every table, score and stat */
+.tb,.gbs,.sc b,.o b,.bf b,.mht b,.qr b,.gbrow b,.lbx,.lbm b,.mpr b,.mls,.bal b{font-variant-numeric:tabular-nums}
+/* loading placeholders */
+.skw{display:grid;gap:10px;margin:10px 0 4px}.sk{border-radius:12px;background:linear-gradient(90deg,var(--raise),var(--line),var(--raise));background-size:200% 100%;animation:lbsk 1.2s ease-in-out infinite}
+@media(prefers-reduced-motion:reduce){.skl,.sk,.fst.lv i{animation:none}}
 /* graph pass: one axis style for every chart, a dot on each real data point, visible keyboard focus everywhere */
 .ch .ax,.gbax{font:500 10.5px var(--fb);fill:var(--mut)}.ch .lpt{fill:var(--card);stroke:var(--mut);stroke-width:1.5}
 /* phones: the market name sits above its prices, so a line like "Under 229.5" is never cut off */

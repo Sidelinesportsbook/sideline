@@ -89,7 +89,7 @@ function openSoc(n){const p=SOCP[n],tm=SAL0[p.tm]||p.tm,g=gOf(tm),pl=PLY.find(x=
  ${upcoming(((TMD.soc||{})[p.tid]||{}).fx,"soc")}${photoCredit(p.id)}${srcNote("ESPN, "+compN(p.src)+" league matches only (no cups or European games)",socSeason(p.src))}${g&&g.pb?`<div class="tm note">Prices: PointsBet (AU), updated ${fmt(Date.parse(PBD.fetched))}${Date.now()-Date.parse(PBD.fetched)>STALE?' · <b class="lost">may be out of date</b>':""}.</div>`:""}`)}
 
 function openPlayer(n,st){if(!SHEET||SHEET.kind==="team"||SHEET.n!==n)SHEET={kind:"player",n,st:st||null};else if(st)SHEET.st=st;
- const html=NBAP[n]?openNBA(n):SOCP[n]?openSoc(n):"";if(!html)return;const old=$("#pso .ps"),y=old?old.scrollTop:0;$("#psw").innerHTML=html;if(old){const m=$("#pso .ps");m.style.animation="none";$("#pso").style.animation="none";m.scrollTop=y}}
+ const html=sheetCol(NBAP[n]?openNBA(n):SOCP[n]?openSoc(n):"",NBAP[n]?(TM[NBAP[n].t]||{}).n:SOCP[n]?SAL0[SOCP[n].tm]||SOCP[n].tm:"");if(!html)return;const old=$("#pso .ps"),y=old?old.scrollTop:0;$("#psw").innerHTML=html;if(old){const m=$("#pso .ps");m.style.animation="none";$("#pso").style.animation="none";m.scrollTop=y}}
 document.addEventListener("click",e=>{const t=e.target;if(!t||!t.closest)return;
  const s=t.closest("[data-pst]");if(s&&SHEET){e.stopPropagation();openPlayer(SHEET.n,s.dataset.pst);return}
  const tt=t.closest("[data-tt]");if(tt&&SHEET&&SHEET.kind==="team"){e.stopPropagation();openTeam(SHEET.n,tt.dataset.tt);return}
