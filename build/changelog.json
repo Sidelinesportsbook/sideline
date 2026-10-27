@@ -1,4 +1,5 @@
 [
+ {"d":"2026-10-27","t":"New: NBA shot charts from ESPN's real shot locations, with zones compared to the league and heat maps, plus Trends and Splits tabs on every player. Teams get an Analytics tab (ratings, quarter scoring, shooting, head to head). Match pages add a shot chart and game flow, and soccer matches show every event and a shot map. Game logs now cover the whole season, not just the last 10 games."},
  {"d":"2026-10-27","t":"Fixed: the page no longer jumps back to the top or the first tab when you tap something. Market tabs like Triple Double stay where you scrolled, open sections stay open through live updates, and Back returns you to the same spot."},
  {"d":"2026-10-27","t":"Every player is now on the Leaderboard automatically, ranked on their checked results. You can hide your bet history in your profile."},
  {"d":"2026-10-27","t":"New: Leaderboard. Join from the Leaderboard tab to rank your real results by profit, ROI, win rate or wins, filtered by period, sport and bet type. Every bet is checked against official results, and you can hide your bet history or leave at any time."},

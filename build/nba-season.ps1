@@ -1,4 +1,4 @@
-# NBA current-season stats from official box scores (ESPN's per-player game logs lag by days).
+﻿# NBA current-season stats from official box scores (ESPN's per-player game logs lag by days).
 # Every finished game since opening night is read once and cached in data\nba-box-cache.json; later runs only fetch new games.
 # Patches data\sideline-data.json in place (atomically): each rostered player's a27 averages and current-season log rows.
 $ErrorActionPreference = 'Stop'
@@ -21,11 +21,34 @@ $sbu = @(0..$nd | % { "${EB}scoreboard?dates=$($SEASON_START.AddDays($_).ToStrin
 $sbr = Fetch $sbu; $need = [Collections.Generic.List[string]]::new()
 foreach ($u in $sbu) { if (-not $sbr[$u]) { continue }; $sj = $sbr[$u] | ConvertFrom-Json
   foreach ($ev in $sj.events) { $tt = $ev.status.type; if ($tt.state -eq 'post' -and $tt.name -notmatch 'POSTPONED|CANCELED' -and -not $cache.ContainsKey([string]$ev.id)) { $need.Add([string]$ev.id) } } }
+# play-by-play cache (data\nba-pbp-cache.json): every shot with its court location and each team's line score and box totals,
+# from the same official summary. A game is read again while it is under 36 hours old (at most every 2 hours), so ESPN's
+# stat corrections replace the first version; the box score rows above are refreshed from that same read.
+$pbpF = Join-Path $PSScriptRoot 'data\nba-pbp-cache.json'; $pbp = @{}
+if (Test-Path $pbpF) { ([IO.File]::ReadAllText($pbpF) | ConvertFrom-Json).PSObject.Properties | % { $pbp[$_.Name] = $_.Value } }
+$now = (Get-Date).ToUniversalTime()
+foreach ($u in $sbu) { if (-not $sbr[$u]) { continue }; $sj = $sbr[$u] | ConvertFrom-Json
+  foreach ($ev in $sj.events) { $tt = $ev.status.type; $id = [string]$ev.id; if ($tt.state -ne 'post' -or $tt.name -match 'POSTPONED|CANCELED' -or $need.Contains($id)) { continue }
+    $c = $pbp[$id]; $old = $c -and ($now - [datetime]::Parse([string]$ev.date).ToUniversalTime()).TotalHours -lt 36 -and ($now - [datetime]::Parse([string]$c.at).ToUniversalTime()).TotalHours -ge 2
+    if (-not $c -or $old) { $need.Add($id) } } }
 $bxu = @{}; foreach ($id in $need) { $bxu[$id] = "${EB}summary?event=$id" }
 $bxr = if ($need.Count) { Fetch @($bxu.Values) } else { @{} }
 $added = 0
+$tsn = 'fieldGoalsMade-fieldGoalsAttempted', 'threePointFieldGoalsMade-threePointFieldGoalsAttempted', 'freeThrowsMade-freeThrowsAttempted', 'totalRebounds', 'offensiveRebounds', 'assists', 'steals', 'blocks', 'turnovers', 'pointsInPaint', 'fastBreakPoints', 'fouls'
 foreach ($id in $need) {
   if (-not $bxr[$bxu[$id]]) { continue }; $sm = $bxr[$bxu[$id]] | ConvertFrom-Json; if (-not $sm.boxscore.players) { continue }
+  # shots: shooter = first participant; ESPN's court coordinates (feet: x across 0-50, y from the rim) only where it sends real ones
+  $cp0 = $sm.header.competitions[0]; $sh = [Collections.Generic.List[string]]::new()
+  foreach ($pl in @($sm.plays)) { if (-not $pl.shootingPlay -or -not $pl.participants) { continue }
+    $x = $pl.coordinate.x; $y = $pl.coordinate.y; $ok = $null -ne $x -and $x -ge -2 -and $x -le 52 -and $y -ge -2 -and $y -le 94
+    $v = [int]$pl.pointsAttempted; if (-not $v) { $v = if ([string]$pl.type.text -like 'Free Throw*') { 1 } elseif ($pl.text -match 'three point') { 3 } else { 2 } }
+    $d = if ($pl.text -match '(\d+)-foot') { $matches[1] } else { '' }
+    $ty = if ($v -eq 1) { 'Free throw' } else { ([string]$pl.type.text) -replace '\|', '' }
+    $sh.Add((@([string]$pl.participants[0].athlete.id, [string]$pl.team.id, [string]$pl.period.number, [string]$pl.clock.displayValue, $(if ($ok -and $v -gt 1) { $x } else { '' }), $(if ($ok -and $v -gt 1) { $y } else { '' }), $(if ($pl.scoringPlay) { 1 } else { 0 }), $v, $d, $ty) -join '|')) }
+  $tl = [Collections.Generic.List[string]]::new()
+  foreach ($cc in $cp0.competitors) { $bt = @($sm.boxscore.teams | ? { [string]$_.team.id -eq [string]$cc.team.id })[0]; $st = @{}; if ($bt) { foreach ($s in $bt.statistics) { $st[$s.name] = [string]$s.displayValue } }
+    $tl.Add((@([string]$cc.team.id, $cc.homeAway, $cc.team.abbreviation, [string]$cc.score, ((@($cc.linescores) | % { $_.displayValue }) -join ',')) + @($tsn | % { $st[$_] }) -join '|')) }
+  $pbp[$id] = [ordered]@{ at = $now.ToString('yyyy-MM-ddTHH:mm:ssZ'); gd = ([string]$cp0.date).Substring(0, 10); t = @($tl); s = @($sh) }
   $cp = $sm.header.competitions[0]; $gd = ([string]$cp.date).Substring(0, 10); $tms = @{}
   foreach ($cc in $cp.competitors) { $tms[[string]$cc.team.id] = @{ ab = $cc.team.abbreviation; ha = $cc.homeAway; sc = [int](Num $cc.score) } }
   $rows = [Collections.Generic.List[string]]::new()
@@ -43,6 +66,8 @@ foreach ($id in $need) {
 # cache first (atomic), so finished games are never fetched twice
 $cj = [ordered]@{}; foreach ($k in ($cache.Keys | Sort-Object)) { $cj[$k] = @($cache[$k]) }
 [IO.File]::WriteAllText("$cacheF.tmp", ($cj | ConvertTo-Json -Depth 4 -Compress), [Text.UTF8Encoding]::new($false)); Move-Item -Force "$cacheF.tmp" $cacheF
+$pj = [ordered]@{}; foreach ($k in ($pbp.Keys | Sort-Object)) { $pj[$k] = $pbp[$k] }
+[IO.File]::WriteAllText("$pbpF.tmp", ($pj | ConvertTo-Json -Depth 5 -Compress), [Text.UTF8Encoding]::new($false)); Move-Item -Force "$pbpF.tmp" $pbpF
 # per player, current season only
 $byP = @{}; foreach ($k in $cache.Keys) { foreach ($r in $cache[$k]) { $f = $r -split '\|'; if (-not $byP.ContainsKey($f[0])) { $byP[$f[0]] = [Collections.Generic.List[object]]::new() }; $byP[$f[0]].Add($f) } }
 $data = [IO.File]::ReadAllText($dataF) | ConvertFrom-Json; $patched = 0
@@ -60,6 +85,23 @@ foreach ($p in $data.pl) {
   $lg = @(@($cur) + @($old) | Select-Object -First 10)
   $p | Add-Member -Force -NotePropertyName a27 -NotePropertyValue $a27; $p | Add-Member -Force -NotePropertyName lg -NotePropertyValue $lg; $patched++
 }
-$data | Add-Member -Force -NotePropertyName nbaBox -NotePropertyValue ([ordered]@{ games = $cache.Count; at = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ') })
+# analytics files the site loads when a profile opens (data\pa, published as pa/): each player's full season log and every
+# shot, and each team's games (line scores, box totals for both sides) and shots. Nothing here is estimated.
+$paD = Join-Path $PSScriptRoot 'data\pa'; New-Item -ItemType Directory -Force $paD | Out-Null
+$stamp = $now.ToString('yyyy-MM-ddTHH:mm:ssZ'); $shP = @{}; $tG = @{}; $tS = @{}
+# court zones, the same rules as the site (analytics.js): ESPN puts the rim at x 25, y 1 (feet); the 3-point arc meets the corner lines at y 9.95
+function Zone($f) { $x = [double]$f[4]; $y = [double]$f[5]; if ($f[7] -eq '3') { if ($y -le 9.95) { 'c3' } else { 'ab3' } } elseif ([math]::Sqrt(($x - 25) * ($x - 25) + ($y - 1) * ($y - 1)) -le 4) { 'ra' } elseif ($x -ge 17 -and $x -le 33 -and $y -le 14.75) { 'pt' } else { 'mid' } }
+$LZ = [ordered]@{ ra = @(0, 0); pt = @(0, 0); mid = @(0, 0); c3 = @(0, 0); ab3 = @(0, 0) }
+foreach ($eid in $pbp.Keys) { $e = $pbp[$eid]; $tt = @($e.t | % { , ($_ -split '\|') }); if ($tt.Count -ne 2) { continue }
+  foreach ($s in $e.s) { $f = $s -split '\|'; if (-not $shP.ContainsKey($f[0])) { $shP[$f[0]] = [Collections.Generic.List[string]]::new() }; $shP[$f[0]].Add((@($eid) + $f[2..9]) -join '|')
+    if ($f[4] -ne '' -and $f[9] -notmatch 'Heave') { $zn = Zone $f; $LZ[$zn][1]++; if ($f[6] -eq '1') { $LZ[$zn][0]++ }; if (-not $tS.ContainsKey($f[1])) { $tS[$f[1]] = [Collections.Generic.List[string]]::new() }; $tS[$f[1]].Add((@($eid, $f[0], $f[2], $f[4], $f[5], $f[6], $f[7], $f[8]) -join '|')) } }
+  for ($i = 0; $i -lt 2; $i++) { $me = $tt[$i]; $op = $tt[1 - $i]; if (-not $tG.ContainsKey($me[0])) { $tG[$me[0]] = [Collections.Generic.List[object]]::new() }
+    $tG[$me[0]].Add([ordered]@{ e = $eid; d = $e.gd; o = $op[2]; oid = $op[0]; ha = $(if ($me[1] -eq 'home') { 'vs' } else { '@' }); pf = [int](Num $me[3]); pa = [int](Num $op[3]); q = @($me[4] -split ',' | ? { $_ -ne '' } | % { [int](Num $_) }); oq = @($op[4] -split ',' | ? { $_ -ne '' } | % { [int](Num $_) }); s = @($me[5..16]); os = @($op[5..16]) }) } }
+$wf = { param($n, $o) [IO.File]::WriteAllText((Join-Path $paD "$n.json"), ($o | ConvertTo-Json -Depth 5 -Compress), [Text.UTF8Encoding]::new($false)) }
+$np = 0; foreach ($plid in $byP.Keys) { $rows = @($byP[$plid] | Sort-Object { $_[1] } -Descending | % { @($_[1..18]) -join '|' }); $sh = [string[]]@(); if ($shP.ContainsKey($plid)) { $sh = [string[]]$shP[$plid].ToArray() }
+  & $wf $plid ([ordered]@{ v = 1; id = $plid; at = $stamp; season = $data.season; lg = $rows; sh = $sh }); $np++ }
+& $wf 'league' ([ordered]@{ v = 1; at = $stamp; season = $data.season; games = $pbp.Count; z = $LZ })
+foreach ($tid in $tG.Keys) { & $wf "t$tid" ([ordered]@{ v = 1; id = $tid; at = $stamp; season = $data.season; cols = $tsn; g = [object[]]@($tG[$tid] | Sort-Object { $_.d } -Descending); sh = $(if ($tS.ContainsKey($tid)) { [string[]]$tS[$tid].ToArray() } else { [string[]]@() }) }) }
+$data | Add-Member -Force -NotePropertyName nbaBox -NotePropertyValue ([ordered]@{ games = $cache.Count; at = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ'); pa = $np })
 [IO.File]::WriteAllText("$dataF.tmp", ($data | ConvertTo-Json -Depth 8 -Compress), [Text.UTF8Encoding]::new($false)); Move-Item -Force "$dataF.tmp" $dataF
 "NBA_SEASON games=$($cache.Count) new=$added players=$patched"

@@ -4,7 +4,7 @@
    instantly the next time. Anything ESPN doesn't publish is shown as unavailable, never estimated. */
 const MC={},MCERR={};let MTAB="ov",MFROM=null,MQ=0;
 try{Object.assign(MC,JSON.parse(localStorage.getItem("sl_mc")||"{}"))}catch(e){}
-function mcSave(){try{const ids=Object.keys(MC).filter(k=>MC[k].fin).sort((a,b)=>(MC[b].at||0)-(MC[a].at||0)).slice(0,12),o={};ids.forEach(k=>{o[k]={...MC[k],pbp:undefined}});localStorage.setItem("sl_mc",JSON.stringify(o))}catch(e){}}
+function mcSave(){try{const ids=Object.keys(MC).filter(k=>MC[k].fin).sort((a,b)=>(MC[b].at||0)-(MC[a].at||0)).slice(0,12),o={};ids.forEach(k=>{o[k]={...MC[k],pbp:undefined,com:undefined}});localStorage.setItem("sl_mc",JSON.stringify(o))}catch(e){}}
 const evOf=g=>g&&(EVM[g.eid]||(ALIAS[g.id]&&EVM[ALIAS[g.id].g.slice(1)])||(String(g.id)[0]==="e"&&EVM[String(g.id).slice(1)]));
 const mPath=m=>m.path||ESP[m.sp];
 function parseMatch(m,j){const comp=(((j.header||{}).competitions)||[])[0]||{},cs=comp.competitors||[],SID={};cs.forEach(c=>{SID[String(c.id||(c.team||{}).id)]=c.homeAway==="home"?"h":"a"});
@@ -14,8 +14,15 @@ function parseMatch(m,j){const comp=(((j.header||{}).competitions)||[])[0]||{},c
  ((j.boxscore||{}).teams||[]).forEach(t=>{o.teams[side((t.team||{}).id)]=(t.statistics||[]).map(s=>[s.label||s.abbreviation||s.name,s.displayValue!=null?s.displayValue:s.value,s.name])});
  const gi=j.gameInfo||{};o.info={venue:gi.venue&&gi.venue.fullName,att:gi.attendance,league:((j.header||{}).league||{}).name};
  if(m.sp==="nba"){((j.boxscore||{}).players||[]).forEach(t=>{const st=(t.statistics||[])[0];if(!st)return;o.players[side((t.team||{}).id)]={lab:st.labels||[],tot:st.totals||[],rows:(st.athletes||[]).map(a=>({n:plById((a.athlete||{}).id)||PN[pkey((a.athlete||{}).displayName||"")]||(a.athlete||{}).displayName,id:(a.athlete||{}).id,pos:((a.athlete||{}).position||{}).abbreviation||"",st:!!a.starter,dnp:!!a.didNotPlay||!(a.stats&&a.stats.length),why:a.reason||"",s:a.stats||[]}))}});
-  o.pbp=(j.plays||[]).map(p=>({q:(p.period||{}).number,c:(p.clock||{}).displayValue||"",t:p.text||"",sc:!!p.scoringPlay,h:p.homeScore,a:p.awayScore,tm:p.team?side(p.team.id):""}))}
+  /* every play keeps ESPN's own id, so a refresh replaces plays (corrections included) instead of adding duplicates. The order is ESPN's
+     own (chronological): a play ESPN adds or corrects later gets a higher sequence number but sits in its real place in the list */
+  o.pbp=(j.plays||[]).map(p=>{const c=p.coordinate||{},ty=(p.type||{}).text||"",tx=p.text||"",v=+p.pointsAttempted||(p.shootingPlay?(/^Free Throw/.test(ty)?1:/three point/.test(tx)?3:2):0),ok=p.shootingPlay&&v>1&&c.x>=-2&&c.x<=52&&c.y>=-2&&c.y<=94,a0=p.participants&&p.participants[0]&&p.participants[0].athlete,d=(tx.match(/(\d+)-foot/)||[])[1];
+   return{id:p.id,s:+p.sequenceNumber||0,q:(p.period||{}).number,c:(p.clock||{}).displayValue||"",t:tx,ty,sc:!!p.scoringPlay,v,shp:!!p.shootingPlay,pid:a0?String(a0.id):"",x:ok?c.x:null,y:ok?c.y:null,d:d==null?null:+d,h:p.homeScore,a:p.awayScore,tm:p.team?side(p.team.id):""}});
+  const seen=new Set();o.pbp=o.pbp.filter(p=>!p.id||!seen.has(p.id)&&seen.add(p.id))}
  else{o.events=(j.keyEvents||[]).map(e=>({min:(e.clock||{}).displayValue||"",type:(e.type||{}).text||"",t:e.text||e.shortText||"",tm:e.team?side(e.team.id):"",sc:!!e.scoringPlay})).filter(e=>e.type&&!/^(Kickoff|Start|End|Halftime)/i.test(e.type)||e.sc);
+  /* the full match feed (shots, fouls, corners, offsides, cards, subs, goals) with each shot's position, matched to a side by team name */
+  const NM={};cs.forEach(c=>{const t=c.team||{},s=c.homeAway==="home"?"h":"a";[t.displayName,t.shortDisplayName,t.name].forEach(x=>{if(x)NM[x]=s})});const seen=new Set();
+  o.com=(j.commentary||[]).map((c,i)=>{const p=c.play||{},ty=(p.type||{}).text||"";return{id:p.id||"c"+(c.sequence??i),s:+(c.sequence??i),min:(c.time||{}).displayValue||(p.clock||{}).displayValue||"",ty,t:c.text||p.text||"",tm:p.team?NM[p.team.displayName]||"":"",sc:!!p.scoringPlay||/^Goal|^Own Goal|Penalty - Scored/i.test(ty),x:p.fieldPositionX??null,y:p.fieldPositionY??null}}).filter(e=>!seen.has(e.id)&&seen.add(e.id));
   (j.rosters||[]).forEach(r=>{const s=r.homeAway==="home"?"h":r.homeAway==="away"?"a":side((r.team||{}).id);o.rosters[s]={form:r.formation||"",rows:(r.roster||[]).map(a=>{const x={};(a.stats||[]).forEach(q=>{x[q.name]=q.value});return{n:plById((a.athlete||{}).id)||PN[pkey((a.athlete||{}).displayName||"")]||(a.athlete||{}).displayName,id:(a.athlete||{}).id,pos:(a.position||{}).abbreviation||"",j:a.jersey||"",st:!!a.starter,on:!!a.subbedIn,off:!!a.subbedOut,x}})}})}
  return o}
 async function loadMatch(m,force){if(!force&&MC[m.id]&&(MC[m.id].fin||Date.now()-MC[m.id].at<6e4))return MC[m.id];
@@ -36,9 +43,9 @@ const mLogo=(s,z)=>tmLogo(s,z);
 const tName=s=>SAL0[s.n]||s.n;
 function mBets(m,g){const ids=new Set([g.id,"e"+m.id]);for(const k in ALIAS)if(ALIAS[k].g==="e"+m.id)ids.add(k);return S.bets.map((b,i)=>[b,i]).filter(([b])=>b.legs.some(l=>ids.has(l.g)))}
 function renderMatch(g,m){const mc=MC[m.id],err=MCERR[m.id],bs=mBets(m,g),soc=m.sp!=="nba";
- if(mc&&MTAB==="pbp"&&!mc.pbp&&!MCERR["l"+m.id]){MCERR["l"+m.id]=1;loadMatch(m,1).catch(()=>{}).finally(()=>{delete MCERR["l"+m.id];if(view===g.id)renderGames()})}
+ if(mc&&(soc?!mc.com&&(MTAB==="tl"||MTAB==="map"):!mc.pbp&&(MTAB==="pbp"||MTAB==="shots"||MTAB==="ov"))&&!MCERR["l"+m.id]){MCERR["l"+m.id]=1;loadMatch(m,1).catch(()=>{}).finally(()=>{delete MCERR["l"+m.id];if(view===g.id)renderGames()})}
  if(!mc&&!err&&!MCERR["l"+m.id]){MCERR["l"+m.id]=1;loadMatch(m).catch(()=>{MCERR[m.id]=1}).finally(()=>{delete MCERR["l"+m.id];if(view===g.id&&pg==="bets")renderGames()})}
- const tabs=[["ov","Overview"],["box",soc?"Player stats":"Box score"],["team","Team stats"],[soc?"tl":"pbp",soc?"Timeline":"Play-by-play"],...(soc?[["line","Lineups"]]:[]),["bets",`Your bets${bs.length?" ("+bs.length+")":""}`]];
+ const tabs=[["ov","Overview"],["box",soc?"Player stats":"Box score"],["team","Team stats"],[soc?"tl":"pbp",soc?"Timeline":"Play-by-play"],soc?["map","Shot map"]:["shots","Shot chart"],...(soc?[["line","Lineups"]]:[]),["bets",`Your bets${bs.length?" ("+bs.length+")":""}`]];
  if(!tabs.some(t=>t[0]===MTAB))MTAB="ov";
  const order=soc?["h","a"]:["a","h"],fin=finalOf(m)||[m.h.sc,m.a.sc],e=endAt(m),live=m.state==="in",lv=LIVE[g.id];
  if(live&&lv&&g.id==="e"+m.id){m.h.sc=lv.h;m.a.sc=lv.a}
@@ -53,8 +60,10 @@ function renderMatch(g,m){const mc=MC[m.id],err=MCERR[m.id],bs=mBets(m,g),soc=m.
  else if(MTAB==="ov")body=mOverview(m,mc,g,bs);
  else if(MTAB==="box")body=soc?mSocPlayers(m,mc):mNbaBox(m,mc);
  else if(MTAB==="team")body=mTeamStats(m,mc);
- else if(MTAB==="pbp")body=mPbp(m,mc);
- else if(MTAB==="tl")body=mTimeline(m,mc);
+ else if(MTAB==="pbp")body=mPbp2(m,mc);
+ else if(MTAB==="shots")body=mShots(m,mc);
+ else if(MTAB==="map")body=mShotMap(m,mc);
+ else if(MTAB==="tl")body=mTimeline2(m,mc);
  else body=mLineups(m,mc);
  $("#games").innerHTML=`${back}${hero}<div class="tabs mtabs">${tabs.map(([k,l])=>`<button data-mt="${k}" class="${MTAB===k?"on":""}">${l}</button>`).join("")}</div><div class="mbody">${body}</div><div class="tm note">Source: ESPN, event ${esc(m.id)}. Statistics ESPN doesn't publish for this game are shown as unavailable.</div>`}
 function lineScore(m,mc){const n=Math.max(mc.lines.h.length,mc.lines.a.length);if(!n)return`<div class="cempty" style="height:56px">Scoring by period not published</div>`;
@@ -68,7 +77,7 @@ function mOverview(m,mc,g,bs){const soc=m.sp!=="nba";let lead="";
  const key=soc?["possessionPct","totalShots","shotsOnTarget","wonCorners"]:["fieldGoalPct","threePointFieldGoalPct","totalRebounds","assists"];
  const kt=key.map(k=>{const a=(mc.teams.a.find(x=>x[2]===k)||[]),h=(mc.teams.h.find(x=>x[2]===k)||[]);return a[1]==null&&h[1]==null?"":cmpRow(a[0]||h[0],soc?h[1]:a[1],soc?a[1]:h[1])}).join("");
  const mine=bs.length?`<h2>Your bets on this game</h2>${bs.slice(0,3).map(([b,i])=>legCompare(b,g)).join("")}${bs.length>3?`<button class="more" data-mt="bets">All ${bs.length} bets ›</button>`:""}`:"";
- return`<h2>Score by ${soc?"half":"quarter"}</h2>${lineScore(m,mc)}${lead}${kt?`<h2>Key stats</h2><div class="card">${cmpHead(m)}${kt}</div>`:""}${mine}`}
+ return`<h2>Score by ${soc?"half":"quarter"}</h2>${lineScore(m,mc)}${soc?"":gameFlow(m,mc)}${lead}${kt?`<h2>Key stats</h2><div class="card">${cmpHead(m)}${kt}</div>`:""}${mine}`}
 const cmpHead=m=>{const o=m.sp!=="nba"?["h","a"]:["a","h"];return`<div class="cmh"><span>${mLogo(m[o[0]],18)} ${esc(m[o[0]].ab||"")}</span><span></span><span>${esc(m[o[1]].ab||"")} ${mLogo(m[o[1]],18)}</span></div>`};
 function cmpRow(lab,l,r){const a=parseFloat(l),b=parseFloat(r),ok=!isNaN(a)&&!isNaN(b)&&a+b>0,pl=ok?a/(a+b)*100:50;
  return`<div class="cmr"><b class="${ok&&a>b?"lead":""}">${l??"–"}</b><span>${esc(lab)}</span><b class="${ok&&b>a?"lead":""}">${r??"–"}</b><div class="cmb"><i style="width:${pl}%"></i><i style="width:${100-pl}%"></i></div></div>`}
