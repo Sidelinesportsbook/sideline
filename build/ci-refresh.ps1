@@ -6,6 +6,7 @@ $ErrorActionPreference = 'Stop'; $R = $PSScriptRoot; Set-Location $R
 function Step($name, $file) { Write-Host "== $name"; & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $R $file); if ($LASTEXITCODE) { Write-Warning "$name failed (exit $LASTEXITCODE); keeping the last good data" } }
 New-Item -ItemType Directory -Force (Join-Path $R 'data') | Out-Null
 if ($Full) { Step 'ESPN build (rosters, squads, logs, fixtures, lines)' 'build-data.ps1' } else { Step 'Team data' 'team-data.ps1'; Step 'NBA season stats' 'nba-season.ps1' }
+Step 'Soccer season (Premier League, Champions League)' 'soc-season.ps1'
 Step 'PointsBet prices' 'pb-data.ps1'
 # the results archive the leaderboard checks bets against: caught up on the last 3 weeks the first time, then every run adds its finals
 if (-not (Test-Path "$R\data\results-archive.done")) { Write-Host '== Results archive (last 3 weeks)'; & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $R 'live-feed.ps1') -Days 21; if (-not $LASTEXITCODE) { [IO.File]::WriteAllText("$R\data\results-archive.done", (Get-Date).ToString('o')) } }

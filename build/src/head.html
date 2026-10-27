@@ -441,14 +441,19 @@ header{background:color-mix(in srgb,var(--card) 82%,transparent)!important;-webk
 .gbr.tr{fill:color-mix(in srgb,var(--acc) 60%,transparent)}.gbb.on .gbr.tr{fill:var(--acc)}.trl{fill:none;stroke:var(--tx);stroke-width:2;stroke-linejoin:round;pointer-events:none}.trd{fill:var(--tx);stroke:var(--panel);stroke-width:1.5;pointer-events:none}
 .ztb td:first-child{white-space:nowrap}.qsp{padding:6px 14px}.qr{display:grid;grid-template-columns:minmax(84px,140px) 1fr 44px 56px;gap:10px;align-items:center;padding:7px 0;border-top:1px solid var(--line);font-size:12.5px}.qr:first-child{border-top:0}
 .qr b{font:700 15px var(--fd);text-align:right}.qr small{color:var(--mut);text-align:right}.qb{height:8px;border-radius:4px;background:var(--raise);overflow:hidden}.qb i{display:block;height:100%;background:var(--acc);border-radius:4px;transition:width .3s var(--ease)}
+.qr.gq{grid-template-columns:minmax(84px,140px) 1fr 30px 30px}.qb2{display:grid;gap:3px}.qb.gf i{background:var(--ov)}.qb.ga i{background:var(--un)}.qr.gq b{font-size:14px}
 .sg.tsg{grid-template-columns:repeat(3,minmax(0,1fr))!important}.tsg .sc b{font-size:21px}.tsg .sc small.tm{text-transform:none;letter-spacing:0;font-size:11px;margin-top:2px}.tsg .sc small.tm small{display:inline;font-size:11px}
-@media(max-width:520px){.sg.tsg{grid-template-columns:repeat(2,minmax(0,1fr))!important}.qr{grid-template-columns:78px 1fr 40px 50px;gap:8px}}
+@media(max-width:520px){.qr.gq{grid-template-columns:minmax(84px,140px) 1fr 30px 30px}.qb2{display:grid;gap:3px}.qb.gf i{background:var(--ov)}.qb.ga i{background:var(--un)}.qr.gq b{font-size:14px}
+.sg.tsg{grid-template-columns:repeat(2,minmax(0,1fr))!important}.qr{grid-template-columns:78px 1fr 40px 50px;gap:8px}}
 .fst{display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:12px;color:var(--mut);margin:2px 2px 8px}.fst i{width:8px;height:8px;border-radius:50%;background:var(--mut);flex:none}.fst b{color:var(--tx);font-size:12px;letter-spacing:.4px;text-transform:uppercase}
 .fst.lv i{background:var(--un);animation:fstp 1.6s ease-in-out infinite}.fst.dl i{background:var(--tB)}.fst.fn i{background:var(--ov)}@keyframes fstp{50%{opacity:.35}}
 .mpr .pav{vertical-align:-4px;margin-right:2px}.pv{font-style:normal;font-size:10.5px;font-weight:800;color:var(--ov);margin-left:4px}.mev.sc span:nth-child(3){font-weight:600;color:var(--tx)}
 .gfh{fill:color-mix(in srgb,var(--acc) 22%,transparent)}.gfa{fill:color-mix(in srgb,var(--tB) 22%,transparent)}.gfl{stroke:var(--tx)!important;stroke-width:1.75!important}
 .gfk{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:-1px}.gfk.h{background:color-mix(in srgb,var(--acc) 60%,transparent)}.gfk.a{background:color-mix(in srgb,var(--tB) 60%,transparent)}
 @media(prefers-reduced-motion:reduce){.skl,.fst.lv i{animation:none}}
+/* graph pass: one axis style for every chart, a dot on each real data point, visible keyboard focus everywhere */
+.ch .ax,.gbax{font:500 10.5px var(--fb);fill:var(--mut)}.ch .lpt{fill:var(--card);stroke:var(--mut);stroke-width:1.5}
+:where(button,a,select,input,[tabindex]):focus-visible{outline:2px solid var(--acc);outline-offset:2px;border-radius:6px}
 </style>
 <header><div class="logo">Sideline</div><nav class="nav"><button id="nb" data-pg="bets">Home</button><button id="nm" data-pg="mb">My bets</button><button id="nlb" data-pg="lb">Leaderboard</button><button id="np" data-pg="pf">Profile</button><button id="nf" data-fb="1">Feedback</button></nav><button class="spin" id="spin"></button><div class="bal"><small>Balance</small><b id="bal"></b><span id="delta" class="dlt"></span></div></header>
 <div id="sv"></div><div id="wheel"></div><div id="toast" class="toast"></div><div id="fbw"></div><div id="psw"></div><div id="gate"><div class="mod gate"><div class="mc"><div class="logo" style="justify-content:center">Sideline</div><div class="tm" style="margin-top:12px">Loading your account…</div></div></div></div>
