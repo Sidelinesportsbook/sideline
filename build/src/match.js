@@ -105,7 +105,7 @@ document.addEventListener("click",e=>{const t=e.target;if(!t||!t.closest)return;
  const c=t.closest("[data-pgm]");if(c&&!t.closest("[data-team],[data-ply]")){e.stopPropagation();const m=EVM[c.dataset.pgm];if(m){const g=gameFor(m);openMatch(g.id,"past")}return}
  const mt=t.closest("[data-mt]");if(mt){e.stopPropagation();MTAB=mt.dataset.mt;renderGames();return}
  const q=t.closest("[data-pbq]");if(q){e.stopPropagation();PBQ=+q.dataset.pbq;renderGames();return}
- if(t.closest("[data-pback]")){e.stopPropagation();view=null;MFROM=null;pg="past";render();requestAnimationFrame(()=>scrollTo(0,MQ));return}
+ if(t.closest("[data-pback]")){e.stopPropagation();view=null;MFROM=null;pg="past";render();navRestore();return}
  const mx=t.closest("[data-mx]");if(mx){e.stopPropagation();openMatchById(mx.dataset.mx,mx.dataset.mp,mx.dataset.ms);return}
  const ob=t.closest(".bc [data-open]");if(ob){e.stopPropagation();openMatch(ob.dataset.open,"bets");return}
  const op=t.closest("[data-open]");if(op&&MFROM&&!t.closest("#psw")){MFROM=null}},true);

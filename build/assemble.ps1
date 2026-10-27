@@ -92,7 +92,10 @@ $rest = Rep $rest '${d>0?"Covering by "+d.toFixed(1):"Needs "+(-d+.5).toFixed(1)
 $rest = Rep $rest 'else if(d.tab){cur=d.tab;view=null;renderTabs();renderGames()}' 'else if(d.tab){cur=d.tab;view=null;window.__q="";renderTabs();renderGames()}'
 # profile "Returned" comes from the leaderboard engine (same rules everywhere)
 $rest = Rep $rest '["Returned",$$(S.bets.filter(b=>b.st!=="open").reduce((q,b)=>q+b.stake,0)+o.np)]' '["Returned",$$(o.ret)]'
-$js.Add($rest); $js.Add((& $src 'soc.js')); $js.Add((& $src 'charts.js')); $js.Add((& $src 'team.js')); $js.Add((& $src 'lbcore.js')); $js.Add((& $src 'cashout.js')); $js.Add((& $src 'ui.js')); $js.Add((& $src 'results.js')); $js.Add((& $src 'gchart.js')); $js.Add((& $src 'version.js')); $js.Add((& $src 'match.js')); $js.Add((& $src 'profiles.js')); $js.Add((& $src 'live.js')); $js.Add((& $src 'slip.js')); $js.Add((& $src 'pricing.js')); $js.Add((& $src 'polish.js')); $js.Add((& $src 'auth.js')); $js.Add((& $src 'leaderboard.js'))
+# going back to the list, or to a page from the menus, returns to where you were on it (nav.js); tapping the page you're on goes to its top
+$rest = Rep $rest 'else if(d.pg){pg=d.pg;view=null;render();scrollTo(0,0)}' 'else if(d.pg){const same=pg===d.pg&&!view;pg=d.pg;view=null;render();navRestore(same)}'
+$rest = Rep $rest 'else if(d.back){view=null;renderTabs();renderGames();scrollTo(0,0)}' 'else if(d.back){view=null;renderTabs();renderGames();navRestore()}'
+$js.Add($rest); $js.Add((& $src 'soc.js')); $js.Add((& $src 'charts.js')); $js.Add((& $src 'team.js')); $js.Add((& $src 'lbcore.js')); $js.Add((& $src 'cashout.js')); $js.Add((& $src 'ui.js')); $js.Add((& $src 'results.js')); $js.Add((& $src 'gchart.js')); $js.Add((& $src 'version.js')); $js.Add((& $src 'match.js')); $js.Add((& $src 'profiles.js')); $js.Add((& $src 'live.js')); $js.Add((& $src 'slip.js')); $js.Add((& $src 'pricing.js')); $js.Add((& $src 'polish.js')); $js.Add((& $src 'auth.js')); $js.Add((& $src 'leaderboard.js')); $js.Add((& $src 'nav.js'))
 
 $data = [IO.File]::ReadAllText("$R\data\sideline-data.json").Replace('</', '<\/')
 $pbj = if (Test-Path "$R\data\pb.json") { [IO.File]::ReadAllText("$R\data\pb.json").Replace('</', '<\/') } else { '{"events":[]}' }
