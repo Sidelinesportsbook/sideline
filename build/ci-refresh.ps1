@@ -1,4 +1,4 @@
-# Runs on GitHub's servers (GitHub Actions, Windows runner) so the public site stays current with this computer off.
+﻿# Runs on GitHub's servers (GitHub Actions, Windows runner) so the public site stays current with this computer off.
 # Same scripts and the same checks as the local refresh jobs; a failed check publishes nothing (the site keeps its last version).
 #   quick: standings + NBA season stats + PointsBet prices + live feed        full (-Full): the whole ESPN build first
 param([switch]$Full)
@@ -7,7 +7,11 @@ function Step($name, $file) { Write-Host "== $name"; & powershell -NoProfile -Ex
 New-Item -ItemType Directory -Force (Join-Path $R 'data') | Out-Null
 if ($Full) { Step 'ESPN build (rosters, squads, logs, fixtures, lines)' 'build-data.ps1' } else { Step 'Team data' 'team-data.ps1'; Step 'NBA season stats' 'nba-season.ps1' }
 Step 'PointsBet prices' 'pb-data.ps1'
+# the results archive the leaderboard checks bets against: caught up on the last 3 weeks the first time, then every run adds its finals
+if (-not (Test-Path "$R\data\results-archive.json")) { Write-Host '== Results archive (last 3 weeks)'; & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $R 'live-feed.ps1') -Days 21 }
 Step 'Live feed snapshot' 'live-feed.ps1'
+# leaderboard: opted-in players' bets checked against the archive (node is on every GitHub runner); a failure keeps the last one
+Write-Host '== Leaderboard'; try { & node (Join-Path $R 'src\lb-agg.js'); if ($LASTEXITCODE) { Write-Warning "Leaderboard not updated (exit $LASTEXITCODE); keeping the last one" } } catch { Write-Warning "Leaderboard not updated: $_" }
 # sanity checks before publishing
 $d = [IO.File]::ReadAllText("$R\data\sideline-data.json") | ConvertFrom-Json
 if (@($d.games).Count -lt 10 -or @($d.pl).Count -lt 400 -or @($d.soc).Count -lt 1000) { throw "Data check failed (games $(@($d.games).Count), NBA players $(@($d.pl).Count), soccer players $(@($d.soc).Count)); not publishing" }
@@ -18,5 +22,6 @@ if (@($t.nba.PSObject.Properties).Count -lt 30 -or @($t.soc.PSObject.Properties)
 $site = Join-Path (Split-Path $R) '_site'; New-Item -ItemType Directory -Force $site | Out-Null
 Copy-Item "$R\netlify\index.html", "$R\netlify\version.json" $site -Force
 Get-ChildItem (Split-Path $R) -File | ? { $_.Name -like 'google*.html' -or $_.Name -eq 'sitemap.xml' } | Copy-Item -Destination $site -Force
+if (Test-Path "$R\data\leaderboard.json") { Copy-Item "$R\data\leaderboard.json" $site -Force } else { [IO.File]::WriteAllText("$site\leaderboard.json", ('{"at":"' + (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ') + '","v":1,"users":[]}')) }
 [IO.File]::WriteAllText("$site\.nojekyll", '')
 Write-Host ("Built: {0} games, {1} NBA players, {2} soccer players, synced {3}" -f @($d.games).Count, @($d.pl).Count, @($d.soc).Count, $d.synced)

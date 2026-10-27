@@ -6,7 +6,7 @@
    profiles and your own profile all use the same rules. Leaving deletes the public copy. Hiding your profile keeps you
    ranked with your totals, without your bet history. */
 const LB={data:null,at:0,err:"",busy:false,all:false,open:null,myId:"",pub:"",f:{period:"all",metric:"net",sport:"all",type:"all",min:10}};
-const LB_SITE=()=>!!window.SL_CLOUD&&!!window.SL_FS;
+const LB_SITE=()=>!!window.SL_CLOUD&&!!window.SL_FS,LB_ART=()=>!!window.claude&&!window.SL_CLOUD;   /* LB_ART: the Claude version, which has no leaderboard of its own */
 const lbSet=()=>S.lb||(S.lb={on:false,prof:true});
 /* settled-at times: stamped when a bet settles, so period filters use when it was decided, not when it was placed */
 const _settleLB=settleAll;settleAll=function(){const open=S.bets.filter(b=>b.st==="open");_settleLB();let ch=false;
@@ -27,7 +27,7 @@ setInterval(()=>lbSync(),5000);
 async function lbLeave(){S.lb.on=false;save();LBSIG="";try{await window.SL_FS.doc("lb/"+UID).delete()}catch(e){}}
 (async()=>{for(let k=0;k<60&&!UID;k++)await new Promise(r=>setTimeout(r,1000));if(!UID||!crypto.subtle)return;
  const h=await crypto.subtle.digest("SHA-256",new TextEncoder().encode("sideline:"+UID));LB.myId=[...new Uint8Array(h)].map(x=>x.toString(16).padStart(2,"0")).join("").slice(0,16);if(pg==="lb")lbPaint()})();
-async function lbLoad(force){if(LB.busy||(!force&&LB.data&&Date.now()-LB.at<12e4))return;LB.busy=true;lbPaint();
+async function lbLoad(force){if(LB_ART())return;if(LB.busy||(!force&&LB.data&&Date.now()-LB.at<12e4))return;LB.busy=true;lbPaint();
  try{const r=await fetch("leaderboard.json?t="+Date.now(),{cache:"no-store"});if(!r.ok)throw new Error(r.status);const d=await r.json();if(!d||!Array.isArray(d.users))throw new Error("bad file");LB.data=d;LB.at=Date.now();LB.err=""}
  catch(e){LB.err=LB.data?"Couldn't refresh just now. Showing the last update.":"Couldn't load the leaderboard. Check your connection and try again."}LB.busy=false;lbPaint()}
 setInterval(()=>{if(pg==="lb"&&!document.hidden)lbLoad(true)},12e4);
@@ -61,7 +61,8 @@ function lbMe(R,users){const st=lbSet(),f={...LB.f,now:Date.now()},mine=LBC.stat
 function lbPaint(){const el=$("#lb");if(!el||pg!=="lb")return;const d=LB.data,users=d?d.users:[],f={...LB.f,now:Date.now()},R=LBC.rank(users,f,LB.f.metric,+LB.f.min);
  const head=`<div class="lbh"><div><h1>Leaderboard</h1><div class="tm">Real results from players who've joined, checked against official results.</div></div><button class="lbref" data-lbref="1"${LB.busy?" disabled":""}>${LB.busy?"Loading…":"Refresh"}</button></div>`;
  let list;
- if(!d&&LB.busy)list=`<div class="card lbl">${'<div class="lbsk"></div>'.repeat(5)}</div>`;
+ if(LB_ART())list=`<div class="card lbe"><b>The leaderboard is on the public site</b><div class="tm">Rankings use online accounts, so they live at sidelinesportsbook.github.io/sideline. Log in there to join.</div></div>`;
+ else if(!d&&LB.busy)list=`<div class="card lbl">${'<div class="lbsk"></div>'.repeat(5)}</div>`;
  else if(!d)list=`<div class="card lbe"><b>Leaderboard unavailable</b><div class="tm">${esc(LB.err||"")}</div><button class="go" data-lbref="1">Try again</button></div>`;
  else if(!users.length)list=`<div class="card lbe"><b>No one has joined yet</b><div class="tm">Be the first: join, and your settled bets are ranked at the next check.</div></div>`;
  else if(!R.rows.length)list=`<div class="card lbe"><b>No ranked players for these filters</b><div class="tm">Try a longer period, another sport or a lower qualifying number.</div></div>`;

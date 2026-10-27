@@ -1,4 +1,5 @@
 [
+ {"d":"2026-10-27","t":"New: Leaderboard. Join from the Leaderboard tab to rank your real results by profit, ROI, win rate or wins, filtered by period, sport and bet type. Every bet is checked against official results, and you can hide your bet history or leave at any time."},
  {"d":"2026-10-27","t":"Cash outs are lower on multis: every leg still to play now carries its own margin, like a bookmaker's live odds, so the more legs left, the smaller the offer. Legs already won count in full."},
  {"d":"2026-10-26","t":"Fixed: when a player doesn't play, that leg is voided and your multi's odds and return are recalculated from the remaining legs straight away (original odds shown for reference)."},
  {"d":"2026-10-26","t":"Fairer cash outs: the value is now the bet's fair worth less a stated 5% (8% live) margin, shown next to what you'd win by keeping it open and your chance of winning."},
