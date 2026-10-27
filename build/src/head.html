@@ -453,6 +453,8 @@ header{background:color-mix(in srgb,var(--card) 82%,transparent)!important;-webk
 @media(prefers-reduced-motion:reduce){.skl,.fst.lv i{animation:none}}
 /* graph pass: one axis style for every chart, a dot on each real data point, visible keyboard focus everywhere */
 .ch .ax,.gbax{font:500 10.5px var(--fb);fill:var(--mut)}.ch .lpt{fill:var(--card);stroke:var(--mut);stroke-width:1.5}
+/* phones: the market name sits above its prices, so a line like "Under 229.5" is never cut off */
+@media(max-width:520px){#games .mk{grid-template-columns:minmax(0,1fr);gap:3px}#games .mk .ml{font-size:10px;letter-spacing:.8px}#games .mk+.mk{margin-top:8px}#games .mk .o span{white-space:normal;overflow:visible;text-overflow:clip;line-height:1.15}}
 :where(button,a,select,input,[tabindex]):focus-visible{outline:2px solid var(--acc);outline-offset:2px;border-radius:6px}
 </style>
 <header><div class="logo">Sideline</div><nav class="nav"><button id="nb" data-pg="bets">Home</button><button id="nm" data-pg="mb">My bets</button><button id="nlb" data-pg="lb">Leaderboard</button><button id="np" data-pg="pf">Profile</button><button id="nf" data-fb="1">Feedback</button></nav><button class="spin" id="spin"></button><div class="bal"><small>Balance</small><b id="bal"></b><span id="delta" class="dlt"></span></div></header>
