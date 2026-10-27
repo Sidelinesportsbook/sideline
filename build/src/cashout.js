@@ -5,7 +5,7 @@
 /* cash-out = the bet's fair expected value minus one stated margin: 5% before the games start, 8% once a live leg is valued by
    the live model (extra allowance for its uncertainty). Bookmaker prices carry their own margin (about 5% across both sides), so it is
    removed first to get each leg's fair chance; nothing is counted twice. This is the site's own estimate, not a bookmaker offer. */
-const CO_PRE=.05,CO_LIVE=.08,CO_OVR=1.05;
+const CO_PRE=.05,CO_LIVE=.07,CO_OVR=1.05;   /* margin on EACH remaining leg, like the margin inside every live bookmaker price */
 function legNow(l){const g=GM[l.g];if(!g)return null;
  if(l.m==="p"){const i=PLY.findIndex(p=>p.n===l.pl&&(p.tm===g.h||p.tm===g.a));if(i<0)return null;const x=pleg(i,l.st,l.s,l.line,g.id);return x&&x.odds>1?x.odds:null}
  const ln=l.m==="s"?(l.s==="h"?l.line:-l.line):l.m==="t"||l.m==="tg"?l.line:undefined;const x=leg(l.g,l.m,l.s,ln);return x&&x.odds>1?x.odds:null}
@@ -48,16 +48,18 @@ function legProb(l){const g=GM[l.g];if(!g)return{ok:0,why:"Game details not avai
    lost leg keeps a value: the refund if every other leg wins). */
 function coQuote(b){if(b.st!=="open")return{ok:0,why:""};const lost=b.legs.filter(l=>l.r==="l").length;
  if(lost>=2||(lost===1&&!b.ins))return{ok:0,why:"This bet has lost"};
- const ps=[];let live=0;for(const l of b.legs){if(l.r)continue;const q=legProb(l);if(!q.ok)return{ok:0,why:q.why};ps.push(q.p);if(q.live)live=1}
+ const ps=[];let live=0,keep=1;for(const l of b.legs){if(l.r)continue;const q=legProb(l);if(!q.ok)return{ok:0,why:q.why};const m=q.live?CO_LIVE:CO_PRE;keep*=1-m;ps.push(q.p*(1-m));if(q.live)live=1}
+ /* every remaining leg is priced like a bookmaker's current odds for it (fair chance less that leg's margin), so a multi with more legs
+    still to go carries a bigger total cut, exactly as stake x original odds / current odds does; legs already won count in full */
  const pay=Math.round(b.stake*b.odds*100)/100,all=ps.reduce((x,p)=>x*p,1);   /* the bet's shown "to win": stake x its current odds (void legs already taken out) */
  const one=b.ins&&!lost?ps.reduce((s,pj,j)=>s+(1-pj)*ps.reduce((x,p,i)=>i===j?x:x*p,1),0):0;
- const ev=lost?b.stake*all:pay*all+b.stake*one,mg=live?CO_LIVE:CO_PRE,v=Math.floor(Math.min(ev*(1-mg),pay-.01)*100)/100;
+ const ev=lost?b.stake*all:pay*all+b.stake*one,mg=1-keep,v=Math.floor(Math.min(ev,pay-.01)*100)/100;
  /* chance: every remaining leg wins (legs treated as independent; same-game legs that move together are not boosted) */
  return v>0?{ok:1,amt:v,live,lostLeg:lost,pay:lost?b.stake:pay,win:all,refund:one,margin:mg,ev}:{ok:0,why:"No value available"}}
 const pct=p=>p>=.995?">99%":p<.005?"<1%":Math.round(p*100)+"%";
 /* cash out now vs keep the bet open, side by side */
 function coCompare(b,q){return`<div class="coc"><div><small>Cash out</small><b class="${q.amt>=b.stake?"won":"lost"}">${$$(q.amt)}</b><em>${sgn(q.amt-b.stake)}</em></div>
- <div title="Potential return if ${q.lostLeg?"the rest win (stake back)":"every remaining leg wins"} · estimate less a ${Math.round(q.margin*100)}% margin, not a bookmaker offer"><small>${q.lostLeg?"Refund if rest win":"Keep · to win"}</small><b>${$$(q.pay)}</b></div></div>`}
+ <div title="Potential return if ${q.lostLeg?"the rest win (stake back)":"every remaining leg wins"} · estimate with a margin on each remaining leg (${Math.round(q.margin*100)}% in total), not a bookmaker offer"><small>${q.lostLeg?"Refund if rest win":"Keep · to win"}</small><b>${$$(q.pay)}</b></div></div>`}
 function coRow(b,i){if(b.st!=="open")return"";const q=coQuote(b);
  return q.ok?`<div class="co"><div class="cow">${coCompare(b,q)}</div><button class="cob" data-co="${i}">Cash out</button></div>`
   :`<div class="co off"><small>Cash out unavailable · ${esc(q.why)}</small></div>`}
