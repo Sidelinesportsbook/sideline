@@ -21,5 +21,7 @@ async function readDocs(){const out=[];let tok="";
  const A=readJ(path.join(D,"results-archive.json"),{res:{},rp:{},ppd:{},ev:{}});["res","rp","ppd","ev"].forEach(k=>A[k]=A[k]||{});
  const REG=readJ(path.join(D,"lb-registry.json"),{}),docs=await readDocs(),out=LBC.aggregate(docs,A,REG,Date.now());
  writeJ(path.join(D,"leaderboard.json"),out);writeJ(path.join(D,"lb-registry.json"),REG);
+ /* the same memory, by public id, for the page's live ranking (it holds only what the public bet records already show) */
+ const PUB={};docs.forEach(d=>{if(REG[d.uid])PUB[d.id]=REG[d.uid]});writeJ(path.join(D,"lb-reg.json"),PUB);
  console.log(`LEADERBOARD_OK ${out.users.length} players, ${out.users.reduce((q,u)=>q+u.recs.filter(r=>r.x).length,0)} settled bets checked, results for ${Object.keys(A.res).length} games`)})()
  .catch(e=>{console.error("Leaderboard not updated: "+e.message);process.exit(1)});

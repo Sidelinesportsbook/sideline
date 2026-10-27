@@ -3,7 +3,7 @@
    hide their bet history, which keeps them ranked on their totals. This device keeps a public copy
    of the account's bets in lb/<account id> (Firestore rules: anyone may read it, only that signed-in account may write it,
    under its own username). Every 30 minutes GitHub's servers check those bets against the official results and publish
-   leaderboard.json (lb-agg.js + lbcore.js); this page ranks from that file with the same engine, so the rankings, public
+   leaderboard.json (lb-agg.js + lbcore.js); between checks this page ranks live from the records themselves (below) with the same engine, so the rankings, public
    profiles and your own profile all use the same rules. Leaving deletes the public copy. Hiding your profile keeps you
    ranked with your totals, without your bet history. */
 const LB={data:null,at:0,err:"",busy:false,all:false,open:null,myId:"",pub:"",f:{period:"all",metric:"net",sport:"all",type:"all",min:10}};
@@ -28,9 +28,36 @@ setInterval(()=>lbSync(),5000);
 (async()=>{for(let k=0;k<60&&!UID;k++)await new Promise(r=>setTimeout(r,1000));if(!UID||!crypto.subtle)return;
  const h=await crypto.subtle.digest("SHA-256",new TextEncoder().encode("sideline:"+UID));LB.myId=[...new Uint8Array(h)].map(x=>x.toString(16).padStart(2,"0")).join("").slice(0,16);if(pg==="lb")lbPaint()})();
 async function lbLoad(force){if(LB_ART())return;if(LB.busy||(!force&&LB.data&&Date.now()-LB.at<12e4))return;LB.busy=true;lbPaint();
- try{const r=await fetch("leaderboard.json?t="+Date.now(),{cache:"no-store"});if(!r.ok)throw new Error(r.status);const d=await r.json();if(!d||!Array.isArray(d.users))throw new Error("bad file");LB.data=d;LB.at=Date.now();LB.err=""}
+ try{const r=await fetch("leaderboard.json?t="+Date.now(),{cache:"no-store"});if(!r.ok)throw new Error(r.status);const d=await r.json();if(!d||!Array.isArray(d.users))throw new Error("bad file");if(!(LB.data&&LB.data.live&&LBL.unsub)){LB.data=d;LB.at=Date.now()}LB.err="";if(LBL.unsub&&Date.parse(d.at)>LBL.at){LBL.at=0;lbBase().then(()=>lbLiveRun()).catch(()=>{})}}
  catch(e){LB.err=LB.data?"Couldn't refresh just now. Showing the last update.":"Couldn't load the leaderboard. Check your connection and try again."}LB.busy=false;lbPaint()}
 setInterval(()=>{if(pg==="lb"&&!document.hidden)lbLoad(true)},12e4);
+/* ---------- live ranking: the moment a bet is placed, settled or cashed out ----------
+   While the Leaderboard is open the page listens to every player's public bet record (Firestore lb/, readable by anyone)
+   and re-ranks on each change with the same engine and the same checks as the server (lbcore.js aggregate): the official
+   results archive and the server's memory of when it first saw each bet (results-archive.json, lb-reg.json, published
+   with every server check), plus any final result this page has just received from ESPN. The server still re-checks every
+   bet every 30 minutes; if live updates aren't available the page shows the server's file as before. */
+const LBL={unsub:null,docs:null,A:null,REG:{},at:0,ids:{},seen:0,err:""};
+async function lbBase(){if(LBL.A&&Date.now()-LBL.at<6e5)return;
+ const get=f=>fetch(f+"?t="+Date.now(),{cache:"no-store"}).then(x=>{if(!x.ok)throw new Error(f+" "+x.status);return x.json()});
+ try{const[a,r]=await Promise.all([get("results-archive.json"),get("lb-reg.json")]);["res","rp","ppd","ev"].forEach(k=>a[k]=a[k]||{});LBL.A=a;LBL.REG=r||{};LBL.at=Date.now()}catch(e){if(!LBL.A)throw e}}
+async function lbPub(uid){if(LBL.ids[uid])return LBL.ids[uid];const h=await crypto.subtle.digest("SHA-256",new TextEncoder().encode("sideline:"+uid));return LBL.ids[uid]=[...new Uint8Array(h)].map(x=>x.toString(16).padStart(2,"0")).join("").slice(0,16)}
+/* the archive plus finals this page already has from ESPN (finished games only, by ESPN event id, as the server stores them) */
+function lbArch(){const B=LBL.A,A={res:{...B.res},rp:{...B.rp},ppd:{...B.ppd},ev:{...B.ev}};
+ const add=gid=>{const m=String(gid)[0]==="e"&&EVM[String(gid).slice(1)];if(!m||!m.iso)return false;if(!A.ev[gid])A.ev[gid]=m.end?{sp:m.sp,iso:m.iso,end:m.end}:{sp:m.sp,iso:m.iso};return true};
+ for(const gid in RES){if(A.res[gid]||String(gid)[0]!=="e")continue;const m=EVM[String(gid).slice(1)];if(!m||m.state!=="post"||!add(gid))continue;A.res[gid]=RES[gid];if(RP[gid]&&Object.keys(RP[gid]).length)A.rp[gid]=RP[gid]}
+ for(const gid in PPD){if(!A.ppd[gid]&&String(gid)[0]==="e"&&add(gid))A.ppd[gid]=PPD[gid]}return A}
+async function lbLiveRun(){if(!LBL.docs||!LBL.A)return;const docs=await Promise.all(LBL.docs.map(async d=>({...d,id:await lbPub(d.uid)}))),REG={};
+ docs.forEach(d=>{const r=LBL.REG[d.id];if(r)REG[d.uid]=JSON.parse(JSON.stringify(r))});   /* a copy: the engine updates it as it goes */
+ const out=LBC.aggregate(docs,lbArch(),REG,Date.now());out.live=1;LB.data=out;LB.at=Date.now();LB.err="";if(pg==="lb")lbPaint()}
+function lbLiveStart(){if(!LB_SITE()||LBL.unsub||LBL.busy||!crypto.subtle)return;LBL.busy=1;
+ lbBase().then(()=>{LBL.unsub=window.SL_FS.collection("lb").onSnapshot(s=>{
+   LBL.docs=s.docs.map(d=>{const f=d.data({serverTimestamps:"estimate"})||{};let bets=[];try{bets=JSON.parse(f.j||"[]")}catch(e){}return{uid:d.id,name:f.name||"",prof:!!f.prof,upd:f.upd&&f.upd.toMillis?f.upd.toMillis():Date.now(),bets}});
+   LBL.err="";lbLiveRun().catch(e=>slog("lb","live ranking failed: "+(e&&e.message||e)))},
+  e=>{LBL.err=String(e&&e.code||e);LBL.unsub=null;slog("lb","live updates unavailable: "+LBL.err);if(pg==="lb")lbPaint()})})
+  .catch(e=>{LBL.err="base";slog("lb","live ranking unavailable: "+(e&&e.message||e))}).finally(()=>{LBL.busy=0})}
+/* new finals reach the page every minute or so: re-rank with them; stop listening a minute after leaving the page */
+setInterval(()=>{if(pg==="lb"&&!document.hidden){LBL.seen=Date.now();lbLiveStart();lbLiveRun().catch(()=>{})}else if(LBL.unsub&&Date.now()-LBL.seen>6e4){LBL.unsub();LBL.unsub=null}},15e3);
 
 const LB_PER={all:"All time",month:"This month",d30:"Last 30 days",year:"This year"},LB_MET={net:"Net profit",roi:"ROI",wr:"Win rate",wins:"Wins"},LB_TYP={all:"All bets",single:"Singles",multi:"Multis"};
 const lbSports=()=>Object.keys(SP).filter(k=>k!=="nfl");
@@ -53,7 +80,7 @@ function lbMe(R,users){const st=lbSet(),f={...LB.f,now:Date.now()},mine=LBC.stat
  if(!LB_SITE())return box(`<b>Your stats</b>`,mini(mine)+`<div class="tm">To join the leaderboard, log in on the public site: sidelinesportsbook.github.io/sideline</div>`);
  const me=users.find(u=>u.id&&u.id===LB.myId),hit=me&&R.rows.find(x=>x.u===me),N=R.rows.length;
  const ctl=`<div class="lbctl"><label class="lbsw"><input type="checkbox" data-lbprof="1"${st.prof?" checked":""}> Show my bet history on my public profile</label></div>${LB.pub==="err"?`<div class="tm lost">Couldn't share your bets just now. It will try again automatically.</div>`:""}`;
- if(!me)return box(`<b>You're on the leaderboard</b><span class="tm">You'll appear after the next check (every 30 minutes).</span>`,mini(mine)+ctl);
+ if(!me)return box(`<b>You're on the leaderboard</b><span class="tm">${LB.data&&LB.data.live?"You'll appear as soon as your first bet is saved.":"You'll appear after the next check (every 30 minutes)."}</span>`,mini(mine)+ctl);
  const s=hit?hit.s:LBC.stats(me.recs,f),need=LB.f.metric==="roi"?LB.f.min-s.counted:LB.f.metric==="wr"?LB.f.min-(s.w+s.l):1-s.counted,wait=(me.pend||0)+(me.unv||0);
  return box(hit?`<span class="lbk${hit.rank<=3?" lbt"+hit.rank:""}">${hit.rank}</span><b>Your rank: ${hit.rank} of ${N}</b><span class="tm">${LB_MET[LB.f.metric]} · ${LB_PER[LB.f.period]}</span>`:`<b>Not ranked yet</b><span class="tm">${need>0?`${need} more ${LB.f.metric==="wr"?"won or lost":"settled"} bet${need===1?"":"s"} to qualify`:"No settled bets in this view"}</span>`,
   mini(s)+`<button class="lnk" data-lbu="${esc(me.id)}">View your public profile</button>${wait?`<div class="tm">${me.pend?me.pend+" open bet"+(me.pend===1?"":"s")+" (not counted until settled)":""}${me.pend&&me.unv?" · ":""}${me.unv?me.unv+" waiting for official results":""}</div>`:""}`+ctl)}
@@ -70,7 +97,7 @@ function lbPaint(){const el=$("#lb");if(!el||pg!=="lb")return;const d=LB.data,us
   ${rows.map(x=>lbRow(x,mine(x))).join("")}${meRow&&!rows.includes(meRow)?`<div class="lbgap">···</div>`+lbRow(meRow,true):""}
   ${R.rows.length>10?`<button class="lball" data-lball="1">${LB.all?"Show top 10":"Show all "+R.rows.length+" players"}</button>`:""}</div>
   ${R.out.length?`<div class="tm lbq">${R.out.length} player${R.out.length===1?" isn't":"s aren't"} ranked in this view yet (not enough settled bets).</div>`:""}`}
- el.innerHTML=head+lbMe(R,users)+lbFilters()+list+`<div class="tm lbft">${d?`Updated ${lbAgo(Date.parse(d.at))} · checked every 30 minutes`:""}${LB.err&&d?" · "+esc(LB.err):""}</div>
+ el.innerHTML=head+lbMe(R,users)+lbFilters()+list+`<div class="tm lbft">${d?(d.live?`<span class="lblv"><i></i>Live</span> Updates the moment a bet is placed, settled or cashed out · every bet is also re-checked on the server every 30 minutes`:`Updated ${lbAgo(Date.parse(d.at))} · checked every 30 minutes`):""}${LB.err&&d?" · "+esc(LB.err):""}</div>
  <details class="card lbhow"><summary>How it's calculated</summary><div class="tm">
  <p><b>Settled bets only.</b> Open bets never count as profit.</p>
  <p><b>Net</b> = returns − stakes · <b>ROI</b> = net ÷ staked · <b>Win rate</b> = won ÷ (won + lost). Voids are left out.</p>
@@ -95,11 +122,11 @@ function lbProfile(id){const d=LB.data,u=d&&d.users.find(x=>x.id===id);if(!u)ret
  </div></div>`;LB.open=id}
 const _renderLB=render;render=function(m){_renderLB(m);const on=pg==="lb",el=$("#lb");if(!el)return;["#nlb","#blb"].forEach(q=>{const b=$(q);if(b)b.className=on?"on":""});
  if(!on){el.style.display="none";LB.shown=false;return}el.style.display="block";$("main").style.display="none";$("#pf").style.display="none";$("#pl").style.display="none";
- if(!LB.shown){LB.shown=true;lbPaint();lbLoad()}};
+ if(!LB.shown){LB.shown=true;lbPaint();lbLoad()}LBL.seen=Date.now();lbLiveStart()};
 document.addEventListener("click",e=>{const t=e.target;if(!t||!t.closest)return;
  const u=t.closest("[data-lbu]");if(u){lbProfile(u.dataset.lbu);return}
  if(t.closest(".lbpc")&&!t.closest("[data-lbclose].lbx0"))return;if(t.closest("[data-lbclose]")){$("#lbp").innerHTML="";LB.open=null;return}
- if(t.closest("[data-lbref]")){lbLoad(true);return}if(t.closest("[data-lball]")){LB.all=!LB.all;lbPaint();return}
+ if(t.closest("[data-lbref]")){lbLoad(true);lbLiveRun().catch(()=>{});return}if(t.closest("[data-lball]")){LB.all=!LB.all;lbPaint();return}
 });
 document.addEventListener("change",e=>{const t=e.target;if(!t)return;if(t.dataset.lbf){LB.f[t.dataset.lbf]=t.value;LB.all=false;lbPaint();return}
  if(t.dataset.lbprof){lbSet().prof=t.checked;save();lbSync(true);toast(t.checked?"Your bet history is shown on your public profile.":"Your bet history is hidden. You stay ranked with your totals.");if(pg==="lb")lbPaint()}});

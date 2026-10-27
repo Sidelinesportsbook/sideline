@@ -23,6 +23,8 @@ if (@($t.nba.PSObject.Properties).Count -lt 30 -or @($t.soc.PSObject.Properties)
 $site = Join-Path (Split-Path $R) '_site'; New-Item -ItemType Directory -Force $site | Out-Null
 Copy-Item "$R\netlify\index.html", "$R\netlify\version.json" $site -Force
 Get-ChildItem (Split-Path $R) -File | ? { $_.Name -like 'google*.html' -or $_.Name -eq 'sitemap.xml' } | Copy-Item -Destination $site -Force
+# the live ranking on the page uses the same results archive and the server's memory of each bet (lb-reg.json)
+foreach ($x in 'results-archive.json', 'lb-reg.json') { if (Test-Path "$R\data\$x") { Copy-Item "$R\data\$x" $site -Force } }
 if (Test-Path "$R\data\leaderboard.json") { Copy-Item "$R\data\leaderboard.json" $site -Force } else { [IO.File]::WriteAllText("$site\leaderboard.json", ('{"at":"' + (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ') + '","v":1,"users":[]}')) }
 # player and team analytics files (full season logs, shot locations), loaded when a profile opens
 if (Test-Path "$R\data\pa") { New-Item -ItemType Directory -Force "$site\pa" | Out-Null; Copy-Item "$R\data\pa\*.json" "$site\pa" -Force }
