@@ -61,6 +61,8 @@ $rest = Rep $rest 'if(l.m==="p"&&INJ[l.pl]==="out"&&!r){l.r="v";ch=true;return}'
 $rest = Rep $rest 'ref:0,vd:0,open:0' 'ref:0,vd:0,co:0,open:0'
 $rest = Rep $rest 'else if(b.st==="ref")o.ref++;else o.vd++;' 'else if(b.st==="ref")o.ref++;else if(b.st==="cash")o.co++;else o.vd++;'
 $rest = Rep $rest '["Refunded",o.ref],["Void",o.vd]' '["Refunded",o.ref],["Cashed out",o.co],["Void",o.vd]'
+# a winning bet pays exactly what it showed: stake x its (rounded) odds
+$rest = Rep $rest 'else{b.st="won";credit(b.stake*o*(b.bx||1));b.odds=Math.round(o*(b.bx||1)*100)/100}' 'else{b.odds=Math.round(o*(b.bx||1)*100)/100;b.st="won";credit(b.stake*b.odds)}'
 # no username editor on the profile page (usernames are chosen once at sign-up)
 $rest = Rep $rest '<div class="card"><h2>Username</h2><input id="nn" value="${S.name||""}" maxlength="16"><button class="go" id="svn">Save username</button><div class="msg" id="nmsg"></div></div>`}' '${(!DB||window.SL_NETLIFY)?`<div class="card"><h2>Account</h2><div class="kv"><span><b>${esc(dn(S.name))}</b><small class="tm" style="display:block">${window.SL_NETLIFY&&DB?"Log back in on any device with your username and PIN.":"Saved on this device. Log back in here with the same username to pick up where you left off."}</small></span><button class="lob" data-logout="1">Log out</button></div></div>`:""}`}'
 # sign-up: Google (via Claude account, syncs devices) or a username saved in this browser

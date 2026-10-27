@@ -49,7 +49,7 @@ function legProb(l){const g=GM[l.g];if(!g)return{ok:0,why:"Game details not avai
 function coQuote(b){if(b.st!=="open")return{ok:0,why:""};const lost=b.legs.filter(l=>l.r==="l").length;
  if(lost>=2||(lost===1&&!b.ins))return{ok:0,why:"This bet has lost"};
  const ps=[];let live=0;for(const l of b.legs){if(l.r)continue;const q=legProb(l);if(!q.ok)return{ok:0,why:q.why};ps.push(q.p);if(q.live)live=1}
- const pay=b.stake*(b.bx||1)*b.legs.reduce((x,l)=>l.r==="v"?x:x*l.odds,1),all=ps.reduce((x,p)=>x*p,1);
+ const pay=Math.round(b.stake*b.odds*100)/100,all=ps.reduce((x,p)=>x*p,1);   /* the bet's shown "to win": stake x its current odds (void legs already taken out) */
  const one=b.ins&&!lost?ps.reduce((s,pj,j)=>s+(1-pj)*ps.reduce((x,p,i)=>i===j?x:x*p,1),0):0;
  const ev=lost?b.stake*all:pay*all+b.stake*one,mg=live?CO_LIVE:CO_PRE,v=Math.floor(Math.min(ev*(1-mg),pay-.01)*100)/100;
  /* chance: every remaining leg wins (legs treated as independent; same-game legs that move together are not boosted) */
