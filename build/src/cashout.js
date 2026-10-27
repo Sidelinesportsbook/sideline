@@ -57,7 +57,7 @@ function coQuote(b){if(b.st!=="open")return{ok:0,why:""};const lost=b.legs.filte
 const pct=p=>p>=.995?">99%":p<.005?"<1%":Math.round(p*100)+"%";
 /* cash out now vs keep the bet open, side by side */
 function coCompare(b,q){return`<div class="coc"><div><small>Cash out</small><b class="${q.amt>=b.stake?"won":"lost"}">${$$(q.amt)}</b><em>${sgn(q.amt-b.stake)}</em></div>
- <div title="Potential return if ${q.lostLeg?"the rest win (stake back)":"every remaining leg wins"} · estimate less a ${Math.round(q.margin*100)}% margin, not a bookmaker offer"><small>${q.lostLeg?"Refund if rest win":"Keep · to win"}</small><b>${$$(q.pay)}</b><em>${pct(q.win)} chance</em></div></div>`}
+ <div title="Potential return if ${q.lostLeg?"the rest win (stake back)":"every remaining leg wins"} · estimate less a ${Math.round(q.margin*100)}% margin, not a bookmaker offer"><small>${q.lostLeg?"Refund if rest win":"Keep · to win"}</small><b>${$$(q.pay)}</b></div></div>`}
 function coRow(b,i){if(b.st!=="open")return"";const q=coQuote(b);
  return q.ok?`<div class="co"><div class="cow">${coCompare(b,q)}</div><button class="cob" data-co="${i}">Cash out</button></div>`
   :`<div class="co off"><small>Cash out unavailable · ${esc(q.why)}</small></div>`}
@@ -65,7 +65,7 @@ let CO_BUSY=false;
 function coOpen(i,note){const b=S.bets[i],q=coQuote(b);if(!q.ok){toast("Cash out unavailable: "+q.why);renderBets();return}
  $("#psw").innerHTML=`<div class="mod" id="pso"><div class="mc" role="dialog" aria-label="Cash out"><button class="x cls" data-psx="1" aria-label="Close">×</button><h2 style="margin-top:4px">Cash out this bet?</h2>
  <div class="tm" style="margin:2px 0 10px">${b.legs.length>1?"Multi · "+b.legs.length+" legs":esc(b.legs[0].d)}</div>
- ${coCompare(b,q)}<div class="kv"><span>Original stake</span><b>${$$(b.stake)}</b></div><div class="kv"><span>Chance every remaining leg wins</span><b>${pct(q.win)}</b></div>
+ ${coCompare(b,q)}<div class="kv"><span>Original stake</span><b>${$$(b.stake)}</b></div>
  ${note?`<div class="msg">${esc(note)}</div>`:""}<button class="go" data-coc="${i}" data-amt="${q.amt}">Cash out ${$$(q.amt)}</button>
  <div class="tm" style="font-size:11px;margin-top:8px">The offer follows the latest odds and can change before you confirm. Play money only.</div></div></div>`}
 function coConfirm(i,shown){if(CO_BUSY)return;const b=S.bets[i];if(!b||b.st!=="open"){$("#psw").innerHTML="";renderBets();return}
