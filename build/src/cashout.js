@@ -39,7 +39,7 @@ const liveAge=()=>Date.now()-Math.max(POLL&&POLL.state==="ok"?POLL.at:0,FEEDAT||
 function legProb(l){const g=GM[l.g];if(!g)return{ok:0,why:"Game details not available yet"};
  if(RES[l.g])return{ok:0,why:"Game finished · settling on the final result"};
  const lv=LIVE[l.g];
- if(!lv){if(lock(g))return{ok:0,why:"Game has started · waiting for live data"};if(l.m==="p"&&INJ[l.pl]==="out")return{ok:0,why:"Suspended: player ruled out"};const c=legNow(l);return c?{ok:1,p:Math.min(.995,1/c/CO_OVR)}:{ok:0,why:"Suspended: no current price for a leg"}}
+ if(!lv){if(lock(g))return{ok:0,why:"Game has started"};if(l.m==="p"&&INJ[l.pl]==="out")return{ok:0,why:"Suspended: player ruled out"};const c=legNow(l);return c?{ok:1,p:Math.min(.995,1/c/CO_OVR)}:{ok:0,why:"Suspended: no current price for a leg"}}
  if(/Suspend|Delay/i.test(lv.q||""))return{ok:0,why:"Suspended: play is "+(/Delay/i.test(lv.q)?"delayed":"suspended")};
  if(liveAge()>6*6e4)return{ok:0,why:"Suspended: live data is delayed"};
  const p=liveProb(l,g,lv);return p==null?{ok:0,why:"No live price for this market"}:{ok:1,p,live:1}}
