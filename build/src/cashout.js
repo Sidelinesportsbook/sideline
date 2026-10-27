@@ -56,11 +56,10 @@ function coQuote(b){if(b.st!=="open")return{ok:0,why:""};const lost=b.legs.filte
  return v>0?{ok:1,amt:v,live,lostLeg:lost,pay:lost?b.stake:pay,win:all,refund:one,margin:mg,ev}:{ok:0,why:"No value available"}}
 const pct=p=>p>=.995?">99%":p<.005?"<1%":Math.round(p*100)+"%";
 /* cash out now vs keep the bet open, side by side */
-function coCompare(b,q){const prof=q.pay-b.stake;return`<div class="coc"><div><small>Cash out now</small><b class="${q.amt>=b.stake?"won":"lost"}">${$$(q.amt)}</b><em>${sgn(q.amt-b.stake)} · guaranteed</em></div>
- <div><small>Keep it open${q.lostLeg?" (refund if the rest win)":""}</small><b>${$$(q.pay)}</b><em>${q.lostLeg?"stake back":sgn(prof)+" profit"} · ${pct(q.win)} chance</em></div></div>
- <div class="tm cocn">Keeping it open could pay ${$$(q.pay)}, but you lose the ${$$(b.stake)} stake if ${q.lostLeg?"another leg misses":b.legs.length>1?"any leg misses":"it misses"}. The cash-out figure is this site's estimate${q.live?" from the live score and time left":" from current prices"}, less a ${Math.round(q.margin*100)}% margin. It isn't a bookmaker offer.</div>`}
+function coCompare(b,q){return`<div class="coc"><div><small>Cash out</small><b class="${q.amt>=b.stake?"won":"lost"}">${$$(q.amt)}</b><em>${sgn(q.amt-b.stake)}</em></div>
+ <div title="Potential return if ${q.lostLeg?"the rest win (stake back)":"every remaining leg wins"} · estimate less a ${Math.round(q.margin*100)}% margin, not a bookmaker offer"><small>${q.lostLeg?"Refund if rest win":"Keep · to win"}</small><b>${$$(q.pay)}</b><em>${pct(q.win)} chance</em></div></div>`}
 function coRow(b,i){if(b.st!=="open")return"";const q=coQuote(b);
- return q.ok?`<div class="co"><div class="cow">${coCompare(b,q)}</div><button class="cob" data-co="${i}">Cash out ${$$(q.amt)}</button></div>`
+ return q.ok?`<div class="co"><div class="cow">${coCompare(b,q)}</div><button class="cob" data-co="${i}">Cash out</button></div>`
   :`<div class="co off"><small>Cash out unavailable · ${esc(q.why)}</small></div>`}
 let CO_BUSY=false;
 function coOpen(i,note){const b=S.bets[i],q=coQuote(b);if(!q.ok){toast("Cash out unavailable: "+q.why);renderBets();return}
