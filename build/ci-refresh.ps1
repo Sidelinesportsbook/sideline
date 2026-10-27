@@ -8,7 +8,7 @@ New-Item -ItemType Directory -Force (Join-Path $R 'data') | Out-Null
 if ($Full) { Step 'ESPN build (rosters, squads, logs, fixtures, lines)' 'build-data.ps1' } else { Step 'Team data' 'team-data.ps1'; Step 'NBA season stats' 'nba-season.ps1' }
 Step 'PointsBet prices' 'pb-data.ps1'
 # the results archive the leaderboard checks bets against: caught up on the last 3 weeks the first time, then every run adds its finals
-if (-not (Test-Path "$R\data\results-archive.json")) { Write-Host '== Results archive (last 3 weeks)'; & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $R 'live-feed.ps1') -Days 21 }
+if (-not (Test-Path "$R\data\results-archive.done")) { Write-Host '== Results archive (last 3 weeks)'; & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $R 'live-feed.ps1') -Days 21; if (-not $LASTEXITCODE) { [IO.File]::WriteAllText("$R\data\results-archive.done", (Get-Date).ToString('o')) } }
 Step 'Live feed snapshot' 'live-feed.ps1'
 # leaderboard: opted-in players' bets checked against the archive (node is on every GitHub runner); a failure keeps the last one
 Write-Host '== Leaderboard'; try { & node (Join-Path $R 'src\lb-agg.js'); if ($LASTEXITCODE) { Write-Warning "Leaderboard not updated (exit $LASTEXITCODE); keeping the last one" } } catch { Write-Warning "Leaderboard not updated: $_" }
