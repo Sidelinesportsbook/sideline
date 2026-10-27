@@ -72,12 +72,9 @@ function lbPaint(){const el=$("#lb");if(!el||pg!=="lb")return;const d=LB.data,us
   ${R.out.length?`<div class="tm lbq">${R.out.length} player${R.out.length===1?" isn't":"s aren't"} ranked in this view yet (not enough settled bets).</div>`:""}`}
  el.innerHTML=head+lbMe(R,users)+lbFilters()+list+`<div class="tm lbft">${d?`Updated ${lbAgo(Date.parse(d.at))} · checked every 30 minutes`:""}${LB.err&&d?" · "+esc(LB.err):""}</div>
  <details class="card lbhow"><summary>How it's calculated</summary><div class="tm">
- <p><b>Only placed bets count</b>, never a saved slip. Open bets show as pending and never count as profit.</p>
- <p><b>Return:</b> won = stake × final odds (a void leg drops out of a multi's odds) · lost = $0 · cashed out = the amount you accepted · Miss-1-leg refund = your stake · void = your stake back.</p>
- <p><b>Net profit</b> = returns − stakes. <b>ROI</b> = net profit ÷ amount staked × 100. <b>Win rate</b> = won ÷ (won + lost) × 100; cash-outs and refunds are neither. Void bets are left out of staked, returns, ROI, win rate and average odds.</p>
- <p><b>Average odds</b> = the average decimal odds of settled bets other than voids (final odds for winners, placed odds otherwise). <b>Best win</b> = the largest profit from one bet. <b>Streak</b> = wins or losses in a row, by settlement time.</p>
- <p><b>Periods</b> go by when a bet was settled. A multi counts under a sport only when all its legs are that sport.</p>
- <p><b>Checks:</b> every result is rebuilt from official ESPN finals and box scores, so a bet counts as the result says, whatever a device recorded. A bet counts only if it was placed before its games started, wasn't changed afterwards, fits the stake you could afford, and any cash-out was taken before the bet was decided. Bets on games without official results yet are left out until they have them.</p></div></details>`}
+ <p><b>Settled bets only.</b> Open bets never count as profit.</p>
+ <p><b>Net</b> = returns − stakes · <b>ROI</b> = net ÷ staked · <b>Win rate</b> = won ÷ (won + lost). Voids are left out.</p>
+ <p><b>Checked</b> against official ESPN results. Bets placed after the start or changed later don't count.</p></div></details>`}
 function lbChart(series){if(series.length<2)return`<div class="tm">Not enough settled bets for a chart yet.</div>`;const w=340,h=140,L=46,T=10,B=20,ax=v=>(v<0?"-":v>0?"+":"")+"$"+Math.round(Math.abs(v)),pts=[[series[0][0]-1,0],...series],xs=pts.map(p=>p[0]),ys=pts.map(p=>p[1]),x0=Math.min(...xs),x1=Math.max(...xs),lo=Math.min(0,...ys),hi=Math.max(0,...ys),pad=(hi-lo)*.1||5,y0=lo-pad,y1=hi+pad;
  const X=t=>L+(t-x0)/((x1-x0)||1)*(w-L-6),Y=v=>T+(y1-v)/(y1-y0)*(h-T-B),d=pts.map((p,i)=>(i?"L":"M")+X(p[0]).toFixed(1)+" "+Y(p[1]).toFixed(1)).join(" "),end=ys[ys.length-1],c=end>=0?"var(--g)":"var(--r)";
  return`<svg viewBox="0 0 ${w} ${h}" class="lbch" role="img" aria-label="Profit over time, now ${sgn(end)}"><line x1="${L}" x2="${w-6}" y1="${Y(0)}" y2="${Y(0)}" stroke="var(--line)" stroke-dasharray="3 3"/>
