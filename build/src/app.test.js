@@ -15,6 +15,22 @@ async function runAppTests(o){o=o||{};const out=[],ok=(name,cond,info)=>out.push
   ok("possessions estimate formula",eq(g.poss,90-10+12+.44*25),g.poss);const A=tAgg([g]);ok("offensive rating = 100 × points ÷ possessions",eq(A.ortg,110/g.poss*100),A.ortg)}
  /* court zones from ESPN coordinates (rim at x 25, y 1) */
  ok("zones: restricted area, paint, mid-range, corner 3, above the break",zoneOf({x:25,y:2,v:2})==="ra"&&zoneOf({x:25,y:12,v:2})==="pt"&&zoneOf({x:8,y:12,v:2})==="mid"&&zoneOf({x:1,y:3,v:3})==="c3"&&zoneOf({x:25,y:26,v:3})==="ab3");
+ /* the FG% zone chart: finer zones agree with the five, left / right follow ESPN's x, figures are made / attempted */
+ {const fam=[],bad=[];for(let x=0.25;x<50;x+=0.5)for(let y=HY+0.1;y<CHALF;y+=0.5){const v=(y<=BRK?(x<3||x>47):Math.hypot(x-25,y-HY)>23.75)?3:2,s={x,y,v},d=dzoneOf(s);if(!d||DZF[d]!==zoneOf(s))fam.push(x+","+y)}
+  ok("zone chart: every court spot has exactly one finer zone, inside its main zone",!fam.length,fam.slice(0,5).join(" "));
+  ok("zone chart: left and right follow ESPN's x across the court",dzoneOf({x:1,y:3,v:3})==="c3l"&&dzoneOf({x:49,y:3,v:3})==="c3r"&&dzoneOf({x:8,y:12,v:2})==="ml"&&dzoneOf({x:42,y:12,v:2})==="mr"&&dzoneOf({x:25,y:18,v:2})==="mc"&&dzoneOf({x:5,y:30,v:3})==="a3l"&&dzoneOf({x:45,y:30,v:3})==="a3r"&&dzoneOf({x:25,y:30,v:3})==="a3c"&&dzoneOf({x:25,y:44,v:3})===null);
+  const sh=[{x:25,y:2,v:2,m:1},{x:25,y:2,v:2,m:0},{x:1,y:3,v:3,m:1},{x:1,y:3,v:3,m:1},{x:1,y:3,v:3,m:0},{x:25,y:60,v:3,m:1}],Z=dzoneStats(sh);
+  ok("zone chart: makes, attempts and points per zone; nothing beyond half court",Z.ra.m===1&&Z.ra.a===2&&Z.ra.pts===2&&Z.c3l.m===2&&Z.c3l.a===3&&Z.c3l.pts===6&&Object.values(Z).reduce((a,s)=>a+s.a,0)===5,JSON.stringify(Z));
+  ok("zone chart: colour scale red at the low figure, yellow at the middle, green at the high, clamped",zHue(ZSCALE.mid[0],"mid")===0&&zHue(ZSCALE.mid[1],"mid")===60&&zHue(ZSCALE.mid[2],"mid")===120&&zHue(5,"ab3")===0&&zHue(95,"ra")===120&&zHue(32,"ab3")>0&&zHue(32,"ab3")<60);
+  /* drawn chart: each zone's shape holds the court spots that belong to it, labels are the rounded made / attempted, small samples stay grey */
+  const many=[];for(let i=0;i<20;i++)many.push({x:8,y:12,v:2,m:i<9?1:0});many.push({x:49,y:3,v:3,m:1},{x:49,y:3,v:3,m:0});const k=10,svgS=courtSvg(many,{w:500,v:"zones",tip:()=>""}),host=document.createElement("div");host.style.cssText="position:fixed;left:-9999px;width:500px";host.innerHTML=svgS;document.body.appendChild(host);
+  const svg=host.querySelector("svg"),paths=[...host.querySelectorAll(".dzg path")],order=["a3l","a3c","a3r","ml","mc","mr","c3l","c3r","pt","ra"],pt=svg.createSVGPoint(),miss=[];
+  for(let x=0.6;x<50;x+=1.3)for(let y=HY+0.6;y<CHALF;y+=1.3){const v=(y<=BRK?(x<3||x>47):Math.hypot(x-25,y-HY)>23.75)?3:2,z=dzoneOf({x,y,v}),near=Math.abs(x-17)<.4||Math.abs(x-33)<.4||Math.abs(x-3)<.4||Math.abs(x-47)<.4||Math.abs(x-25)<.4&&y<=BRK||Math.abs(y-FTY)<.4||Math.abs(y-BRK)<.4||Math.abs(Math.hypot(x-25,y-HY)-23.75)<.4||Math.hypot(x-25,y-HY)<5;if(near)continue;
+   pt.x=x*k;pt.y=(y-CBASE)*k;const hit=order.filter((zz,i)=>paths[i].isPointInFill(pt)),top=hit.includes("ra")?"ra":hit.includes("pt")?"pt":hit[0];if(hit.filter(h=>h!=="pt"&&h!=="ra").length>1||top!==z)miss.push(`${x.toFixed(1)},${y.toFixed(1)}:${z}/${hit.join("+")}`)}
+  const labs=[...host.querySelectorAll(".dzl")].map(t=>t.textContent.trim()),lo=paths[order.indexOf("c3r")];host.remove();
+  ok("zone chart: drawn zones match the zone rules and don't overlap",!miss.length,miss.slice(0,6).join(" "));
+  ok("zone chart: label is made ÷ attempted, rounded (9/20 = 45%)",labs.includes("45%"),labs.join(","));
+  ok("zone chart: a zone with under 5 attempts is grey, not coloured",lo.classList.contains("dzlo")&&!lo.getAttribute("style"),lo.outerHTML.slice(0,120))}
  /* play-by-play score: added up from scoring plays when they match the official score; ESPN's own otherwise */
  {const mc={fin:1,sc:{h:5,a:2},psum:{h:5,a:2,df:1},pbp:[]},f=pbScore(mc),bad=pbScore({fin:1,sc:{h:6,a:2},psum:{h:5,a:2}}),live=pbScore({fin:0,sc:{h:7,a:2},psum:{h:5,a:2}});
   ok("rebuilt running score used when it matches the official score",f.ok&&f({ch:3,ca:2,h:4,a:2})==="2–3");ok("ESPN's own score kept when the totals disagree",!bad.ok&&bad({ch:3,ca:2,h:4,a:2})==="2–4");ok("live: rebuilt score kept while the feed is behind",live.ok)}

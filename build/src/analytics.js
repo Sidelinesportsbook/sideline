@@ -50,19 +50,44 @@ function zonePaths(k){const P=(x,y)=>(x*k).toFixed(1)+","+((y-CBASE)*k).toFixed(
  return{mid:`M${P(3,CBASE)}L${P(3,BRK)}${A}${P(47,BRK)}L${P(47,CBASE)}Z`,pt:`M${P(17,CBASE)}L${P(17,FTY)}L${P(33,FTY)}L${P(33,CBASE)}Z`,ra:`M${P(21,CBASE+4)}L${P(21,HY)}A${r(4)} ${r(4)} 0 0 0 ${P(29,HY)}L${P(29,CBASE+4)}Z`,
   c3:`M${P(0,CBASE)}L${P(0,BRK)}L${P(3,BRK)}L${P(3,CBASE)}ZM${P(47,CBASE)}L${P(47,BRK)}L${P(50,BRK)}L${P(50,CBASE)}Z`,ab3:`M${P(0,BRK)}L${P(3,BRK)}${A}${P(47,BRK)}L${P(50,BRK)}L${P(50,CHALF)}L${P(0,CHALF)}Z`}}
 const ZLAB={ra:[25,3.9],pt:[25,10.6],mid:[25,21.6],c3:[1.5,6.5],ab3:[25,33]};
+/* the zones of the FG% chart: the five above, with mid-range and above-the-break threes split left / centre / right by the lane
+   lines extended (x 17 and 33) and the corners split left and right. Left and right are as drawn (ESPN's x runs across the court).
+   Shots from beyond half court have no zone. Each zone belongs to one of the five (its family), which sets its colour scale. */
+var DZ=[["ra","Restricted area","ra"],["pt","Paint (non-RA)","pt"],["ml","Mid-range, left","mid"],["mc","Mid-range, centre","mid"],["mr","Mid-range, right","mid"],["c3l","Corner 3, left","c3"],["c3r","Corner 3, right","c3"],["a3l","Above the break 3, left","ab3"],["a3c","Above the break 3, centre","ab3"],["a3r","Above the break 3, right","ab3"]];
+const DZF={};DZ.forEach(([z,,f])=>DZF[z]=f);
+function dzoneOf(s){if(s.x==null||s.y>CHALF)return null;if(s.v===3)return s.y<=BRK?(s.x<25?"c3l":"c3r"):s.x<17?"a3l":s.x>33?"a3r":"a3c";
+ if(Math.hypot(s.x-25,s.y-HY)<=4)return"ra";if(s.x>=17&&s.x<=33&&s.y<=FTY)return"pt";return s.x<17?"ml":s.x>33?"mr":"mc"}
+function dzoneStats(shots){const Z={};DZ.forEach(([z])=>Z[z]={m:0,a:0,pts:0});shots.forEach(s=>{const z=dzoneOf(s);if(z){Z[z].a++;if(s.m){Z[z].m++;Z[z].pts+=s.v}}});return Z}
+/* the colour scale, FG% (made ÷ attempted) for each kind of shot: red at or below the first figure, yellow at the second, green at or
+   above the third, blended in between. Fixed figures around the NBA's usual range for that shot, so a colour means the same for every
+   player and filter. Fewer than ZMIN attempts: grey (too few to judge); fewer than ZFULL: the colour is paler (small sample). */
+var ZSCALE={ra:[52,64,76],pt:[32,42,52],mid:[32,41,50],c3:[30,38,46],ab3:[28,36,44]},ZMIN=5,ZFULL=15;
+function zHue(p,fam){const[lo,md,hi]=ZSCALE[fam];return p<=md?60*Math.max(0,Math.min(1,(p-lo)/(md-lo))):60+60*Math.max(0,Math.min(1,(p-md)/(hi-md)))}
+function zFill(p,fam){return`hsl(${zHue(p,fam).toFixed(0)} 68% 44%)`}
+function dzonePaths(k){const P=(x,y)=>(x*k).toFixed(1)+","+((y-CBASE)*k).toFixed(1),r=v=>(v*k).toFixed(1),YX=HY+Math.sqrt(23.75*23.75-64),A=sw=>`A${r(23.75)} ${r(23.75)} 0 0 ${sw} `;
+ return{ra:`M${P(21,CBASE+4)}L${P(21,HY)}A${r(4)} ${r(4)} 0 0 0 ${P(29,HY)}L${P(29,CBASE+4)}Z`,pt:`M${P(17,CBASE)}L${P(17,FTY)}L${P(33,FTY)}L${P(33,CBASE)}Z`,
+  ml:`M${P(3,CBASE)}L${P(3,BRK)}${A(0)}${P(17,YX)}L${P(17,CBASE)}Z`,mc:`M${P(17,FTY)}L${P(17,YX)}${A(0)}${P(33,YX)}L${P(33,FTY)}Z`,mr:`M${P(47,CBASE)}L${P(47,BRK)}${A(1)}${P(33,YX)}L${P(33,CBASE)}Z`,
+  c3l:`M${P(0,CBASE)}L${P(0,BRK)}L${P(3,BRK)}L${P(3,CBASE)}Z`,c3r:`M${P(47,CBASE)}L${P(47,BRK)}L${P(50,BRK)}L${P(50,CBASE)}Z`,
+  a3l:`M${P(0,BRK)}L${P(3,BRK)}${A(0)}${P(17,YX)}L${P(17,CHALF)}L${P(0,CHALF)}Z`,a3c:`M${P(17,YX)}${A(0)}${P(33,YX)}L${P(33,CHALF)}L${P(17,CHALF)}Z`,a3r:`M${P(33,YX)}${A(0)}${P(47,BRK)}L${P(50,BRK)}L${P(50,CHALF)}L${P(33,CHALF)}Z`}}
+const DZLAB={ra:[25,3.75],pt:[25,10.4],ml:[10,9],mc:[25,19.6],mr:[40,9],c3l:[1.5,3.2],c3r:[48.5,3.2],a3l:[8.5,30],a3c:[25,33.5],a3r:[41.5,30]};
+/* one zone's tooltip: FG% with makes / attempts, points, share of attempts and the NBA figure for the same zone this season */
+function dzTip(z,s,L,tot){const lab=DZ.find(x=>x[0]===z)[1];if(!s.a)return`${lab} · no attempts`;const p=s.m/s.a*100,l=L&&L[z]&&L[z][1]>=200?L[z][0]/L[z][1]*100:null;
+ return`${lab} · FG% ${p.toFixed(1)}% (${s.m}/${s.a}) · ${s.pts} point${s.pts===1?"":"s"} · ${Math.round(s.a/(tot||1)*100)}% of located attempts${l!=null?` · NBA ${l.toFixed(1)}% (${p-l>=0?"+":""}${(p-l).toFixed(1)})`:""}${s.a<ZMIN?` · only ${s.a} attempt${s.a===1?"":"s"}, too few to colour`:s.a<ZFULL?" · small sample":""}`}
 /* shots on the court: markers (made filled circle, missed cross), zones (FG% against the league), or a frequency heat map */
 function courtSvg(shots,o){const W=o.w,k=W/50,H=47*k,sx=x=>(x*k).toFixed(1),sy=y=>((y-CBASE)*k).toFixed(1);let body="";
- if(o.v==="zones"){const Z=zoneStats(shots),zp=zonePaths(k),L=o.lg;
-  body=["ab3","mid","c3","pt","ra"].map(z=>{const s=Z[z],p=s.a?s.m/s.a*100:null,lp=L&&L[z]&&L[z][1]?L[z][0]/L[z][1]*100:null,df=p!=null&&lp!=null&&s.a>=5?p-lp:null,cls=df==null?"zn0":df>=5?"zn2":df>=2?"zn1":df<=-5?"zm2":df<=-2?"zm1":"zn0";
-   return`<path d="${zp[z]}" class="zn ${s.a?cls:"zne"}"/>`}).join("")+courtLines(k)+ZN.map(([z])=>{const s=Z[z],[lx,ly]=ZLAB[z],small=z==="c3"||z==="ra";if(!s.a)return"";
-   const t=`<text x="${sx(lx)}" y="${sy(ly)}" class="znl${small?" sm":""}" text-anchor="middle">${Math.round(s.m/s.a*100)}%</text>`+(small?"":`<text x="${sx(lx)}" y="${(+sy(ly)+13).toFixed(1)}" class="zns" text-anchor="middle">${s.m}/${s.a}</text>`);
-   return z==="c3"?t+`<text x="${sx(48.5)}" y="${sy(ly)}" class="znl sm" text-anchor="middle">${Math.round(s.m/s.a*100)}%</text>`:t}).join("")}
+ if(o.v==="zones"){const Z=dzoneStats(shots),zp=dzonePaths(k),L=o.lgd,tot=Object.values(Z).reduce((a,s)=>a+s.a,0),nar=k<9;
+  /* each zone coloured by this player's own FG% there (zHue scale), on the hardwood; the label is FG% with makes / attempts */
+  body=["a3l","a3c","a3r","ml","mc","mr","c3l","c3r","pt","ra"].map(z=>{const s=Z[z],p=s.a?s.m/s.a*100:null,low=s.a<ZMIN;
+   return`<g class="gbb dzg" data-gt="${esc(dzTip(z,s,L,tot))}"><path d="${zp[z]}" class="dz${low?" dzlo":""}${s.a&&!low&&s.a<ZFULL?" dzsm":""}"${low?"":` style="fill:${zFill(p,DZF[z])}"`}/></g>`}).join("")+courtLines(k)
+   +DZ.map(([z])=>{const s=Z[z],[lx,ly]=DZLAB[z],cor=z==="c3l"||z==="c3r",sm=cor||z==="ra";if(!s.a)return"";const X=sx(lx),Y=+sy(ly),pc=Math.round(s.m/s.a*100)+"%",fr=s.m+"/"+s.a;
+    return z==="ra"?`<text x="${X}" y="${(Y+4).toFixed(1)}" class="dzl sm" text-anchor="middle">${pc} <tspan class="dzn">${fr}</tspan></text>`
+     :(an=>`<text x="${an[0]}" y="${Y.toFixed(1)}" class="dzl${sm||nar?" sm":""}" text-anchor="${an[1]}">${pc}</text><text x="${an[0]}" y="${(Y+(sm||nar?11:14)).toFixed(1)}" class="dzn" text-anchor="${an[1]}">${cor?fr:"("+fr+")"}</text>`)(z==="c3l"?[sx(.25),"start"]:z==="c3r"?[sx(49.75),"end"]:[X,"middle"])}).join("")}
  else if(o.v==="heat"){const c=3,B={};let mx=0;shots.forEach(s=>{const i=Math.min(16,Math.floor(Math.max(0,s.x)/c)),j=Math.min(15,Math.floor(Math.max(0,s.y-CBASE)/c)),key=i+"_"+j;B[key]=(B[key]||0)+1;mx=Math.max(mx,B[key])});
   body=Object.keys(B).map(key=>{const[i,j]=key.split("_").map(Number),n=B[key];return`<rect x="${(i*c*k).toFixed(1)}" y="${(j*c*k).toFixed(1)}" width="${(Math.min(c,50-i*c)*k).toFixed(1)}" height="${(c*k).toFixed(1)}" class="hm" style="opacity:${(.14+.8*n/mx).toFixed(2)}"><title>${n} attempt${n>1?"s":""}</title></rect>`}).join("")+courtLines(k);o.hmax=mx}
  else{const rr=Math.max(3.2,.52*k);body=courtLines(k)+shots.map(s=>{const x=sx(s.x),y=sy(s.y),tip=esc(o.tip(s));
    return s.m?`<g class="gbb shm" data-gt="${tip}"><circle cx="${x}" cy="${y}" r="${Math.max(9,rr+5)}" class="shh"/><circle cx="${x}" cy="${y}" r="${rr.toFixed(1)}" class="mk"/></g>`
    :(d=>`<g class="gbb shm" data-gt="${tip}"><circle cx="${x}" cy="${y}" r="${Math.max(9,rr+5)}" class="shh"/><path d="${d}" class="mxw"/><path d="${d}" class="mx"/></g>`)(`M${(+x-rr*.8).toFixed(1)},${(+y-rr*.8).toFixed(1)}l${(rr*1.6).toFixed(1)},${(rr*1.6).toFixed(1)}m0,-${(rr*1.6).toFixed(1)}l-${(rr*1.6).toFixed(1)},${(rr*1.6).toFixed(1)}`)}).join("")}
- const wood=o.v!=="zones"&&o.v!=="heat";   /* the shot markers sit on a hardwood floor; the zone and heat views stay flat so their colours read true */
+ const wood=o.v!=="heat";   /* shot markers and zones sit on the hardwood floor (zone colours are near-opaque, so they read true); the heat map stays flat */
  return`<svg class="ctc${wood?" hw":""}" viewBox="0 0 ${W.toFixed(1)} ${H.toFixed(1)}" width="100%" role="img" aria-label="${esc(o.label||"Shot chart")}">${wood?hardwood(W,H,k,o.team):`<rect width="${W}" height="${H}" class="ctbg"/>`}${body}</svg>`}
 /* hardwood: maple planks running baseline to baseline with staggered end joints, the home team's colour in the paint and its
    logo in the centre circle (the official ESPN logo, kept in proportion). Decoration only: nothing here comes from the data. */
@@ -89,13 +114,16 @@ function shotPanel(all,o){const st=o.st,G=o.games||{},order=o.order||[],ctx=o.ct
   ${order.length>1?`<div class="gbf">${btn("g","all","Season ("+order.length+")")}${order.length>5?btn("g","5","L5"):""}${order.length>10?btn("g","10","L10"):""}${ctx!=="m"?btn("ha","all","Home & away")+btn("ha","h","Home")+btn("ha","a","Away"):""}${gsel}</div>`:""}
   <div class="gbf">${btn("q",0,"All periods")}${qs.map(q=>btn("q",q,q>=5?"OT":"Q"+q)).join("")}<span class="gbsp"></span>${btn("t","all","2PT + 3PT")}${btn("t","2","2PT")}${btn("t","3","3PT")}</div>`;
  if(!sel.length&&!fg.length)return`<div class="gbc">${ctl}<div class="cempty">${o.none||"No shots in this selection."}</div></div>`;
- const chart=loc.length?courtSvg(loc,{w:W,v:st.v,lg:o.lg,tip:o.tip,label:o.label,team:o.team}):`<div class="cempty">No shot locations in this selection.</div>`;
- const leg=st.v==="zones"?`<div class="scleg"><span><i class="lz zn2"></i>5+ pts above league</span><span><i class="lz zn1"></i>2 to 5 above</span><span><i class="lz zn0"></i>within 2</span><span><i class="lz zm1"></i>2 to 5 below</span><span><i class="lz zm2"></i>5+ below</span>${o.lg?"":"<span>League figures not loaded</span>"}</div><div class="tm note">Colour compares FG% in each zone with the NBA this season (zones with fewer than 5 attempts stay neutral). Figures are made / attempted.</div>`
+ const chart=loc.length?courtSvg(loc,{w:W,v:st.v,lg:o.lg,lgd:o.lgd,tip:o.tip,label:o.label,team:o.team}):`<div class="cempty">No shot locations in this selection.</div>`;
+ const leg=st.v==="zones"?`<div class="dzleg"><div class="dzbar"><i></i><span>Cold</span><span>Average</span><span>Hot</span></div><div class="dzsc">${[["ra","At the rim"],["pt","Paint"],["mid","Mid-range"],["c3","Corner 3"],["ab3","Above-break 3"]].map(([f,l])=>`<span>${l} <b>${ZSCALE[f][0]}%</b> · <b>${ZSCALE[f][1]}%</b> · <b>${ZSCALE[f][2]}%</b></span>`).join("")}</div>
+  <div class="scleg"><span><i class="lz dzlo"></i>Fewer than ${ZMIN} attempts: too few to colour</span><span><i class="lz dzsm" style="background:${zFill(50,"mid")}"></i>${ZMIN}-${ZFULL-1} attempts: small sample (dashed edge)</span></div></div>
+  <div class="tm note">Each zone is coloured by ${ctx==="t"?"this team's":ctx==="m"?"the field-goal percentage of the shots shown,":"this player's own"}${ctx==="m"?"":" field-goal percentage"} there (made ÷ attempted), for the games and filters chosen above. It isn't points per shot or expected value. A three and a two use different scales: red at the first figure, yellow at the second, green at the third. Tap or hover a zone for its points and the NBA figure. Left and right are as drawn on the chart.</div>`
   :st.v==="heat"?`<div class="scleg"><span class="hgr"><i></i></span><span>Darker = more attempts. Each square is 3 × 3 ft. This shows how often, not how well.</span></div>`
   :`<div class="scleg"><span><i class="lm"></i>Made</span><span><i class="lx">✕</i>Missed</span><span>${loc.length} shot${loc.length===1?"":"s"} shown</span></div>`;
- const Z=zoneStats(fg.filter(s=>s.x!=null)),L=o.lg,za=fg.filter(s=>s.x!=null).length||1;
- const ztb=`<div class="tw"><table class="tb ztb"><thead><tr><th>Zone</th><th>FGM-FGA</th><th>FG%</th><th>NBA</th><th>Share</th></tr></thead><tbody>${ZN.map(([z,lab])=>{const s=Z[z],lp=L&&L[z]&&L[z][1]?L[z][0]/L[z][1]*100:null,p=s.a?s.m/s.a*100:null;
-  return`<tr><td>${lab}</td><td>${s.m}-${s.a}</td><td class="${p!=null&&lp!=null&&s.a>=5?(p-lp>=2?"won":p-lp<=-2?"lost":""):""}">${s.a?p.toFixed(1)+"%":"–"}</td><td>${lp!=null?lp.toFixed(1)+"%":"–"}</td><td>${s.a?Math.round(s.a/za*100)+"%":"–"}</td></tr>`}).join("")}
+ /* the table: every zone of the chart (same shots: located, not beyond half court), with the NBA's figure for the zone this season */
+ const Z=dzoneStats(fg),L=o.lgd,za=Object.values(Z).reduce((a,s)=>a+s.a,0)||1;
+ const ztb=`<div class="tw"><table class="tb ztb"><thead><tr><th>Zone</th><th>FGM-FGA</th><th>FG%</th><th>Points</th><th>NBA</th><th>Share</th></tr></thead><tbody>${DZ.map(([z,lab,fam])=>{const s=Z[z],lp=L&&L[z]&&L[z][1]>=200?L[z][0]/L[z][1]*100:null,p=s.a?s.m/s.a*100:null;
+  return`<tr><td><i class="dzsw${!s.a||s.a<ZMIN?" dzlo":""}"${s.a>=ZMIN?` style="background:${zFill(p,fam)}"`:""}></i>${lab}</td><td>${s.m}-${s.a}</td><td>${s.a?p.toFixed(1)+"%":"–"}</td><td>${s.pts}</td><td>${lp!=null?lp.toFixed(1)+"%":"–"}</td><td>${s.a?Math.round(s.a/za*100)+"%":"–"}</td></tr>`}).join("")}
   ${ft.length?`<tr><td>Free throws</td><td>${ft.filter(s=>s.m).length}-${ft.length}</td><td>${pctS(ft.filter(s=>s.m).length,ft.length)}</td><td>–</td><td>–</td></tr>`:""}</tbody></table></div>`;
  const sum=`<div class="gbs"><span>FG <b>${M}/${fg.length}</b> ${pctS(M,fg.length)}</span><span>3PT <b>${m3}/${t3.length}</b> ${pctS(m3,t3.length)}</span><span>eFG% <b>${fg0.length?((fg0.filter(s=>s.m).length+.5*m3)/fg0.length*100).toFixed(1):"–"}</b></span><span>Avg distance <b>${dist.length?f1(dist.reduce((a,b)=>a+b,0)/dist.length)+" ft":"–"}</b></span>${ft.length?`<span>FT <b>${ft.filter(s=>s.m).length}/${ft.length}</b></span>`:""}</div>`;
  let rec="";if(o.box&&!st.q&&st.t==="all"){let bm=0,ba=0;(order.length?eids:Object.keys(o.box)).forEach(e=>{const b=o.box[e];if(b){bm+=b[0];ba+=b[1]}});
@@ -137,7 +165,7 @@ function nbaAnalytics(n,p,pt){if(!p.c27&&!(PA[String(p.id)]||{}).lg)return`<div 
  const rows=(d.lg||[]).map(r=>r.split("|")),src=d.fb?`read directly from ESPN for the last ${d.fbn} games (the full season is on the public site)`:`ESPN play-by-play, ${rows.length} game${rows.length===1?"":"s"} this season, updated ${fmt(Date.parse(d.at))}`;
  if(!rows.length)return`<div class="cempty">No games played this season yet.</div>`;
  if(pt==="sh"){const G={},box={};rows.forEach(r=>{G[r[17]]={d:r[0],iso:r[18],opp:r[1],ha:r[2],res:r[3]};box[r[17]]=[+r[12],+r[13]]});SHEET.sc=SHEET.sc||{v:"dots",g:"all",ha:"all",q:0,t:"all"};
-  return`<h2>Shot chart · ${SEASON.current}</h2>`+shotPanel((d.sh||[]).map(shP),{team:(TM[p.t]||{}).n,st:SHEET.sc,games:G,order:rows.map(r=>r[17]),box,ctx:"p",lg:lg&&lg.z,src,label:n+" shot chart",
+  return`<h2>Shot chart · ${SEASON.current}</h2>`+shotPanel((d.sh||[]).map(shP),{team:(TM[p.t]||{}).n,st:SHEET.sc,games:G,order:rows.map(r=>r[17]),box,ctx:"p",lg:lg&&lg.z,lgd:lg&&lg.dz,src,label:n+" shot chart",
    tip:s=>{const g=G[s.e]||{};return`${g.d?fmtD(gTime(g.d,g.iso)):""} · ${g.ha==="@"?"@":"vs"} ${g.opp||""} · ${qL(s.q)} ${s.c} · ${s.ty}${s.d!=null?" · "+s.d+" ft":""} · ${s.v}PT ${s.m?"MADE":"MISSED"}`}})}
  if(pt==="tr")return plTrends(rows,src);return plSplits(rows,d,src)}
 function plTrends(rows,src){const wins=[3,5,10].filter(x=>x<=rows.length),win=wins.includes(SHEET.tw)?SHEET.tw:wins.includes(5)?5:wins[wins.length-1]||0,sel=SHEET.ts||"pts",rng=SHEET.tg||"all",def=PSTATS.find(x=>x[0]===sel)||PSTATS[0],pct=!!def[3];
@@ -207,7 +235,7 @@ function nbaTeamAnalytics(k){const d=paGet("t"+k.id),lg=paGet("league");
  const avg=pct?(()=>{const a=tg.reduce((s,g)=>s+g.a,0);return a?tg.reduce((s,g)=>s+g.m,0)/a*100:null})():(()=>{const v=tg.map(g=>g.v).filter(x=>x!=null);return v.length?v.reduce((a,b)=>a+b,0)/v.length:null})();
  const trend=`<div class="gbc"><div class="pst gbt">${TSTATS.map(x=>`<button data-tas="${x[0]}" class="${x[0]===def[0]?"on":""}">${x[1]}</button>`).join("")}</div>${gbHead(def[1],"Game by game · this season",null,"")}${trendChart(tg,{avg,pct,win,label:def[1]+" by game"})}</div>`;
  const G={},order=gs.map(g=>g.e);gs.forEach(g=>G[g.e]={d:g.d,iso:g.iso,opp:g.opp,ha:g.ha,res:g.res});SHEET.sc=SHEET.sc||{v:"zones",g:"all",ha:"all",q:0,t:"all"};
- const tbox={};gs.forEach(g=>tbox[g.e]=g.fg);const shots=shotPanel((d.sh||[]).map(shT),{team:k.n,st:SHEET.sc,games:G,order,box:tbox,ctx:"t",lg:lg&&lg.z,src:"ESPN play-by-play",label:k.n+" shot chart",tip:s=>{const g=G[s.e]||{};return`${plById(s.pid)||"Player"} · ${g.d?fd(gTime(g.d,g.iso)):""} ${g.ha==="@"?"@":"vs"} ${g.opp||""} · ${qL(s.q)} · ${s.d!=null?s.d+" ft · ":""}${s.v}PT ${s.m?"MADE":"MISSED"}`}});
+ const tbox={};gs.forEach(g=>tbox[g.e]=g.fg);const shots=shotPanel((d.sh||[]).map(shT),{team:k.n,st:SHEET.sc,games:G,order,box:tbox,ctx:"t",lg:lg&&lg.z,lgd:lg&&lg.dz,src:"ESPN play-by-play",label:k.n+" shot chart",tip:s=>{const g=G[s.e]||{};return`${plById(s.pid)||"Player"} · ${g.d?fd(gTime(g.d,g.iso)):""} ${g.ha==="@"?"@":"vs"} ${g.opp||""} · ${qL(s.q)} · ${s.d!=null?s.d+" ft · ":""}${s.v}PT ${s.m?"MADE":"MISSED"}`}});
  const nx=gOf(k.n),oppN=nx?(nx.h===k.n?nx.a:nx.h):null,oab=oppN&&(Object.values(TM).find(t=>t.n===oppN)||{}).ab,h2h=oab?gs.filter(g=>g.opp===oab):[];
  const hh=oppN?`<h2>Head to head · ${esc(oppN)}</h2>${h2h.length?`<div class="card">${h2h.map(g=>`<div class="kv"><span>${fd(g.t)} · ${g.ha==="@"?"@":"vs"} ${esc(g.opp)}</span><b class="${g.pf>g.pa?"won":"lost"}">${g.res}</b></div>`).join("")}</div>`:`<div class="cempty" style="height:56px">No meetings yet this season.</div>`}`:"";
  const leaders=(()=>{const ro=DATA.pl.filter(p=>p.t===k.id&&p.c27&&p.c27.gp);if(!ro.length)return"";const top=(f,l)=>{const p=ro.slice().sort((a,b)=>f(b.c27)-f(a.c27))[0];return`<div class="kv"><span>${l}</span><span class="bxp">${avatar(p.n,p.id,"nba",22)}<button class="pnm" data-ply="${esc(p.n)}">${esc(p.n)}</button> <b>${f1(f(p.c27))}</b></span></div>`};
@@ -252,7 +280,7 @@ function mShots(m,mc){const sh=(mc.pbp||[]).filter(p=>p.shp).map(p=>({e:m.id,q:p
  if(!sh.length)return`<div class="cempty">${m.state==="pre"?"The shot chart starts at tip-off.":"ESPN hasn't published shot locations for this game."}</div>`;
  const side=MSC.side||"both",sel=side==="both"?sh:sh.filter(s=>s.tm===side),bt=(v,l)=>`<button data-scs="${v}" class="${side===v?"on":""}">${l}</button>`;
  const box={};if(side!=="both"){const p=mc.players[side];if(p){const ix=p.lab.indexOf("FG");if(ix>=0){const t=String(p.tot[ix]||"").split("-");box[m.id]=[+t[0],+t[1]]}}}
- return`<div class="gbf">${bt("both","Both teams")}${bt("a",esc(m.a.ab||tName(m.a)))}${bt("h",esc(m.h.ab||tName(m.h)))}</div>`+shotPanel(sel,{team:tName(m.h),st:MSC,games:{},order:[],box:side!=="both"?box:null,ctx:"m",lg:(PA.league||{}).z,src:"ESPN play-by-play for this game"+(m.state==="in"?", updating live":""),label:"Shot chart",table:true,
+ return`<div class="gbf">${bt("both","Both teams")}${bt("a",esc(m.a.ab||tName(m.a)))}${bt("h",esc(m.h.ab||tName(m.h)))}</div>`+shotPanel(sel,{team:tName(m.h),st:MSC,games:{},order:[],box:side!=="both"?box:null,ctx:"m",lg:(PA.league||{}).z,lgd:(PA.league||{}).dz,src:"ESPN play-by-play for this game"+(m.state==="in"?", updating live":""),label:"Shot chart",table:true,
   tip:s=>`${plById(s.pid)||"Player"} (${esc((m[s.tm]||{}).ab||"")}) · ${qL(s.q)} ${s.c} · ${s.ty}${s.d!=null?" · "+s.d+" ft":""} · ${s.v}PT ${s.m?"MADE":"MISSED"}`})}
 document.addEventListener("click",e=>{const t=e.target;if(!t||!t.closest)return;const b=t.closest("[data-pbt]");if(b){e.stopPropagation();PBT=b.dataset.pbt;renderGames();return}
  const s=t.closest("[data-scs]");if(s){e.stopPropagation();MSC.side=s.dataset.scs;renderGames()}},true);
