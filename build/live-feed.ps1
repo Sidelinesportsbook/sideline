@@ -42,7 +42,7 @@ foreach ($k in $LG.Keys) {
         $w = @($s.keyEvents | ? { $_.wallclock } | % { $_.wallclock }); if ($w.Count) { $end = ($w | Sort-Object)[-1] }
         # extra time / penalties: soccer markets settle on the 90-minute score (first two halves of the official line score)
         if ($st.name -match 'AET|PEN') { $hc = $s.header.competitions[0].competitors | ? homeAway -eq 'home'; $ac = $s.header.competitions[0].competitors | ? homeAway -eq 'away'
-          if (@($hc.linescores).Count -ge 2 -and @($ac.linescores).Count -ge 2) { $reg = @((Num $hc.linescores[0].displayValue) + (Num $hc.linescores[1].displayValue), (Num $ac.linescores[0].displayValue) + (Num $ac.linescores[1].displayValue)) } }
+          if (@($hc.linescores).Count -ge 2 -and @($ac.linescores).Count -ge 2) { $reg = @(((Num $hc.linescores[0].displayValue) + (Num $hc.linescores[1].displayValue)), ((Num $ac.linescores[0].displayValue) + (Num $ac.linescores[1].displayValue))) } }
       }
       $hsc = Num $HOMEC.score; $asc = Num $AWAYC.score
       if ($st.state -eq 'in') { $live[$gid] = [ordered]@{ q = (($st.shortDetail, $st.detail, 'Live') | ? { $_ } | Select-Object -First 1) -replace ' - ', ' '; h = $hsc; a = $asc; p = $box } }
