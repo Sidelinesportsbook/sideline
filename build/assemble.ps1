@@ -80,6 +80,10 @@ $rest = Rep $rest '<div class="tr">${bd(g.a)}${g.a}${sc?' '<div class="tr">${bd(
 $rest = Rep $rest '<div class="tr">${bd(g.h)}${g.h}${sc?' '<div class="tr">${bd(g.h)}${tlink(g.h)}${sc?'
 $rest = Rep $rest '<div>${bd(g.a,56)}<br>${g.a}</div>' '<div><button class="tbig" data-team="${esc(g.a)}">${bd(g.a,56)}<br>${g.a}</button></div>'
 $rest = Rep $rest '<div>${bd(g.h,56)}<br>${g.h}</div>' '<div><button class="tbig" data-team="${esc(g.h)}">${bd(g.h,56)}<br>${g.h}</button></div>'
+# soccer lists the home team first (as the colour strip, win chances, live cards, match centre and Past games already do); NBA stays away @ home
+$rest = Rep $rest '<div class="hero"><div><button class="tbig" data-team="${esc(g.a)}">${bd(g.a,56)}<br>${g.a}</button></div><div>VS<small>${stt(g)||fmt(g.ts)}</small></div><div><button class="tbig" data-team="${esc(g.h)}">${bd(g.h,56)}<br>${g.h}</button></div></div>' '<div class="hero">${((x,y)=>`<div><button class="tbig" data-team="${esc(x)}">${bd(x,56)}<br>${x}</button></div><div>VS<small>${stt(g)||fmt(g.ts)}</small></div><div><button class="tbig" data-team="${esc(y)}">${bd(y,56)}<br>${y}</button></div>`)(...(SP[g.sp].m==="soc"?[g.h,g.a]:[g.a,g.h]))}</div>'
+$rest = Rep $rest '<div class="tr">${bd(g.a)}${tlink(g.a)}${sc?`<span style="margin-left:auto">${sc[1]}</span>`:""}</div><div class="tr">${bd(g.h)}${tlink(g.h)}${sc?`<span style="margin-left:auto">${sc[0]}</span>`:""}</div>' '${(()=>{const ra=`<div class="tr">${bd(g.a)}${tlink(g.a)}${sc?`<span style="margin-left:auto">${sc[1]}</span>`:""}</div>`,rh=`<div class="tr">${bd(g.h)}${tlink(g.h)}${sc?`<span style="margin-left:auto">${sc[0]}</span>`:""}</div>`;return SP[g.sp].m==="soc"?rh+ra:ra+rh})()}'
+$rest = Rep $rest 'btn(g.id,"h","a",dis)+(soc?btn(g.id,"h","d",dis):"")+btn(g.id,"h","h",dis)' '(soc?btn(g.id,"h","h",dis)+btn(g.id,"h","d",dis)+btn(g.id,"h","a",dis):btn(g.id,"h","a",dis)+btn(g.id,"h","h",dis))'
 # player names in bet cards, tracking and the slip open the player page
 $rest = Rep $rest '<div><b>${l.d}</b><small class="tm" style="display:block">' '<div><b>${legD(l)}</b><small class="tm" style="display:block">'
 $rest = Rep $rest '<div class="ldh"><b>${l.d}</b>' '<div class="ldh"><b>${legD(l)}</b>'
@@ -109,7 +113,7 @@ $rest = Rep $rest 'g.sp==="epl"||g.sp==="ucl"?" goals":" points"' 'SP[g.sp]&&SP[
 $rest = Rep $rest 'else if(sp==="epl"||sp==="ucl"){(j.rosters' 'else if(SP[sp]&&SP[sp].m==="soc"){(j.rosters'
 # futures (Special Bets): settled from official results by futures.js, never voided here for having no game; their cards name the competition
 $rest = Rep $rest 'const g=GM[l.g]||{a:"–",h:"–"};return`<div class="lg2">' 'const g=GM[l.g]||(l.fut?{a:l.fut.cn,h:l.fut.mn,f:1}:{a:"–",h:"–"});return`<div class="lg2">'
-$rest = Rep $rest '<small class="tm" style="display:block">@${f2(l.odds)} · ${g.a} @ ${g.h}${nw(l)}</small>' '<small class="tm" style="display:block">@${f2(l.odds)} · ${g.f?g.a+" · "+g.h:g.a+" @ "+g.h}${g.f?"":nw(l)}</small>'
+$rest = Rep $rest '<small class="tm" style="display:block">@${f2(l.odds)} · ${g.a} @ ${g.h}${nw(l)}</small>' '<small class="tm" style="display:block">@${f2(l.odds)} · ${g.f?g.a+" · "+g.h:g.sp&&SP[g.sp]&&SP[g.sp].m==="soc"?g.h+" v "+g.a:g.a+" @ "+g.h}${g.f?"":nw(l)}</small>'
 # going back to the list, or to a page from the menus, returns to where you were on it (nav.js); tapping the page you're on goes to its top
 $rest = Rep $rest 'else if(d.pg){pg=d.pg;view=null;render();scrollTo(0,0)}' 'else if(d.pg){const same=pg===d.pg&&!view;pg=d.pg;view=null;render();navRestore(same)}'
 $rest = Rep $rest 'else if(d.back){view=null;renderTabs();renderGames();scrollTo(0,0)}' 'else if(d.back){view=null;renderTabs();renderGames();navRestore()}'

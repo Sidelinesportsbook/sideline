@@ -459,7 +459,7 @@ document.addEventListener("click",e=>{const t=e.target;if(!t||!t.closest)return;
 function tPair(h,a){const ch=teamColour(h),c1=teamColour(a),c2=teamColour(a,1);if(!ch||!c1)return[null,null];if(colDist(ch,c1)>=90)return[ch,c1];if(c2&&colDist(ch,c2)>=90)return[ch,c2];return[null,null]}
 const _rgTeamCol=renderGames;renderGames=function(){_rgTeamCol.apply(this,arguments);const el=$("#games");if(!el)return;const g=view&&GM[view],P=["--th","--ta","--tl","--tr"];
  if(!g){P.forEach(p=>el.style.removeProperty(p));return}const[ch,ca]=tPair(g.h,g.a);if(!ch){P.forEach(p=>el.style.removeProperty(p));return}
- el.style.setProperty("--th",ch);el.style.setProperty("--ta",ca);const nba=g.sp==="nba";el.style.setProperty("--tl",nba?ca:ch);el.style.setProperty("--tr",nba?ch:ca)};
+ el.style.setProperty("--th",ch);el.style.setProperty("--ta",ca);const nba=SP[g.sp].m!=="soc";el.style.setProperty("--tl",nba?ca:ch);el.style.setProperty("--tr",nba?ch:ca)};
 /* match charts are drawn at the page's width: redraw them when the window changes size (rotating a phone) */
 addEventListener("resize",(()=>{let tm=0,w=innerWidth;return()=>{clearTimeout(tm);tm=setTimeout(()=>{if(Math.abs(innerWidth-w)<40)return;w=innerWidth;if(view&&pg==="bets")renderGames()},250)}})());
 /* a profile sheet carries its team's colour (--tc) for the header strip and chart bars */
