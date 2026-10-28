@@ -50,7 +50,8 @@ const tName=s=>SAL0[s.n]||s.n;
 function mBets(m,g){const ids=new Set([g.id,"e"+m.id]);for(const k in ALIAS)if(ALIAS[k].g==="e"+m.id)ids.add(k);return S.bets.map((b,i)=>[b,i]).filter(([b])=>b.legs.some(l=>ids.has(l.g)))}
 function renderMatch(g,m){const mc=MC[m.id],err=MCERR[m.id],bs=mBets(m,g),soc=m.sp!=="nba";
  if(mc&&(soc?!mc.com&&(MTAB==="tl"||MTAB==="map"):!mc.pbp&&(MTAB==="pbp"||MTAB==="shots"||MTAB==="ov"))&&!MCERR["l"+m.id]){MCERR["l"+m.id]=1;loadMatch(m,1).catch(()=>{}).finally(()=>{delete MCERR["l"+m.id];if(view===g.id)renderGames()})}
- if(!mc&&!err&&!MCERR["l"+m.id]){MCERR["l"+m.id]=1;loadMatch(m).catch(()=>{MCERR[m.id]=1}).finally(()=>{delete MCERR["l"+m.id];if(view===g.id&&pg==="bets")renderGames()})}
+ /* a failed first load is tried again (every 20 seconds while the game is live): ESPN sometimes sends an empty reply for a while */
+ if(!mc&&(!err||Date.now()-err>(m.state==="in"?2e4:6e4))&&!MCERR["l"+m.id]){MCERR["l"+m.id]=1;loadMatch(m).catch(()=>{MCERR[m.id]=Date.now()}).finally(()=>{delete MCERR["l"+m.id];if(view===g.id&&pg==="bets")renderGames()})}
  const tabs=[["ov","Overview"],["box",soc?"Player stats":"Box score"],["team","Team stats"],[soc?"tl":"pbp",soc?"Timeline":"Play-by-play"],soc?["map","Shot map"]:["shots","Shot chart"],...(soc?[["line","Lineups"]]:[]),["bets",`Your bets${bs.length?" ("+bs.length+")":""}`]];
  if(!tabs.some(t=>t[0]===MTAB))MTAB="ov";
  const order=soc?["h","a"]:["a","h"],fin=finalOf(m)||[m.h.sc,m.a.sc],e=endAt(m),live=m.state==="in",lv=LIVE[g.id];
@@ -63,7 +64,7 @@ function renderMatch(g,m){const mc=MC[m.id],err=MCERR[m.id],bs=mBets(m,g),soc=m.
  let body;
  if(!mc&&!err)body=skel([20,"30%"],96,[20,"24%"],200,120)+`<div class="tm note">Loading the full match from ESPN…</div>`;
  else if(MTAB==="bets")body=mBetsTab(m,g,bs);
- else if(!mc)body=`<div class="card"><div class="msg">Couldn't reach ESPN for the full box score (offline or blocked). ${live?"Live player stats from the shared feed":"The final score and saved player stats"} are below.</div></div>${boxTable(m,RP[g.id]||LRP[g.id]||(lv&&lv.p)||{})}`;
+ else if(!mc)body=`<div class="card"><div class="msg">ESPN isn't sending the full box score for this game right now (or the connection dropped). Trying again ${live?"every 20 seconds":"shortly"}; ${live?"live player stats from the shared feed":"the final score and saved player stats"} are below.</div></div>${boxTable(m,RP[g.id]||LRP[g.id]||(lv&&lv.p)||{})}`;
  else if(MTAB==="ov")body=mOverview(m,mc,g,bs);
  else if(MTAB==="box")body=soc?mSocPlayers(m,mc):mNbaBox(m,mc);
  else if(MTAB==="team")body=mTeamStats(m,mc);
