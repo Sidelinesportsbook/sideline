@@ -46,7 +46,10 @@ async function lbPub(uid){if(LBL.ids[uid])return LBL.ids[uid];const h=await cryp
 function lbArch(){const B=LBL.A,A={res:{...B.res},rp:{...B.rp},ppd:{...B.ppd},ev:{...B.ev}};
  const add=gid=>{const m=String(gid)[0]==="e"&&EVM[String(gid).slice(1)];if(!m||!m.iso)return false;if(!A.ev[gid])A.ev[gid]=m.end?{sp:m.sp,iso:m.iso,end:m.end}:{sp:m.sp,iso:m.iso};return true};
  for(const gid in RES){if(A.res[gid]||String(gid)[0]!=="e")continue;const m=EVM[String(gid).slice(1)];if(!m||m.state!=="post"||!add(gid))continue;A.res[gid]=RES[gid];if(RP[gid]&&Object.keys(RP[gid]).length)A.rp[gid]=RP[gid]}
- for(const gid in PPD){if(!A.ppd[gid]&&String(gid)[0]==="e"&&add(gid))A.ppd[gid]=PPD[gid]}return A}
+ for(const gid in PPD){if(!A.ppd[gid]&&String(gid)[0]==="e"&&add(gid))A.ppd[gid]=PPD[gid]}
+ /* games in progress: their start time, and the live box score (a player "over" already passed counts as won) */
+ A.lv={};for(const gid in LIVE){if(A.res[gid]||String(gid)[0]!=="e")continue;const m=EVM[String(gid).slice(1)];if(!m||m.state!=="in"||!add(gid))continue;if(LIVE[gid]&&LIVE[gid].p)A.lv[gid]=LIVE[gid].p}
+ for(const id in EVM){const m=EVM[id];if(m&&m.state==="in")add("e"+id)}return A}
 async function lbLiveRun(){if(!LBL.docs||!LBL.A)return;const docs=await Promise.all(LBL.docs.map(async d=>({...d,id:await lbPub(d.uid)}))),REG={};
  docs.forEach(d=>{const r=LBL.REG[d.id];if(r)REG[d.uid]=JSON.parse(JSON.stringify(r))});   /* a copy: the engine updates it as it goes */
  const out=LBC.aggregate(docs,lbArch(),REG,Date.now());out.live=1;LB.data=out;LB.at=Date.now();LB.err="";if(pg==="lb")lbPaint()}
@@ -97,7 +100,7 @@ function lbPaint(){const el=$("#lb");if(!el||pg!=="lb")return;const d=LB.data,us
   ${rows.map(x=>lbRow(x,mine(x))).join("")}${meRow&&!rows.includes(meRow)?`<div class="lbgap">···</div>`+lbRow(meRow,true):""}
   ${R.rows.length>10?`<button class="lball" data-lball="1">${LB.all?"Show top 10":"Show all "+R.rows.length+" players"}</button>`:""}</div>
   ${R.out.length?`<div class="tm lbq">${R.out.length} player${R.out.length===1?" isn't":"s aren't"} ranked in this view yet (not enough settled bets).</div>`:""}`}
- el.innerHTML=head+lbMe(R,users)+lbFilters()+list+`<div class="tm lbft">${d?(d.live?`<span class="lblv"><i></i>Live</span> Updates the moment a bet is placed, settled or cashed out · every bet is also re-checked on the server every 30 minutes`:`Updated ${lbAgo(Date.parse(d.at))} · checked every 30 minutes`):""}${LB.err&&d?" · "+esc(LB.err):""}</div>
+ el.innerHTML=head+lbMe(R,users)+lbFilters()+list+`<div class="tm lbft">${d?(d.live?`<span class="lblv"><i></i>Live</span> Last change ${new Date(LB.at).toLocaleTimeString("en-AU",{hour:"numeric",minute:"2-digit",second:"2-digit"})} · updates the moment a bet is placed, settled or cashed out · every bet is also re-checked on the server every 30 minutes`:`Updated ${lbAgo(Date.parse(d.at))} · checked every 30 minutes`):""}${LB.err&&d?" · "+esc(LB.err):""}</div>
  <details class="card lbhow"><summary>How it's calculated</summary><div class="tm">
  <p><b>Settled bets only.</b> Open bets never count as profit.</p>
  <p><b>Net</b> = returns − stakes · <b>ROI</b> = net ÷ staked · <b>Win rate</b> = won ÷ (won + lost). Voids are left out.</p>
@@ -132,7 +135,15 @@ document.addEventListener("change",e=>{const t=e.target;if(!t)return;if(t.datase
  if(t.dataset.lbprof){lbSet().prof=t.checked;save();lbSync(true);toast(t.checked?"Your bet history is shown on your public profile.":"Your bet history is hidden. You stay ranked with your totals.");if(pg==="lb")lbPaint()}});
 document.addEventListener("keydown",e=>{if(e.key==="Escape"&&LB.open){$("#lbp").innerHTML="";LB.open=null}});
 /* your own profile uses the same rules as the leaderboard */
-const _profLB=prof;prof=function(){const o=_profLB(),s=LBC.stats(myRecs());o.np=s.net;o.stake=s.staked;o.ret=s.ret;o.w=s.w;o.l=s.l;o.best=s.best||0;o.streak=s.streak?(s.streak.k==="w"?"W":"L")+s.streak.n:"–";return o};
+/* every Profile figure comes from the same records as the charts and the leaderboard (settled bets in settlement order,
+   voids left out), so no card can disagree with a graph */
+const _profLB=prof;prof=function(){const o=_profLB(),R=myRecs(),s=LBC.stats(R),set=R.filter(r=>r.x&&r.x!=="v").sort((a,b)=>a.s-b.s||a.t-b.t),net=r=>LBC.r2(r.r-r.k);
+ o.np=s.net;o.stake=s.staked;o.ret=s.ret;o.w=s.w;o.l=s.l;o.ref=s.rf;o.co=s.c;o.vd=s.v;o.open=s.pending;o.best=s.best||0;o.streak=s.streak?(s.streak.k==="w"?"W":"L")+s.streak.n:"–";
+ o.worst=set.length?Math.min(0,...set.map(net)):0;o.odds=Math.max(0,...set.filter(r=>r.x==="w").map(r=>r.o));o.avgOdds=s.avg;
+ const live=S.bets.filter(b=>b.st!=="void");o.avgStake=live.length?live.reduce((a,b)=>a+b.stake,0)/live.length:null;
+ let run=0;o.bestStreak=0;set.forEach(r=>{if(r.x==="w"){run++;o.bestStreak=Math.max(o.bestStreak,run)}else if(r.x==="l")run=0});
+ /* by sport as before: a bet goes under its first leg's sport (a multi across sports too); bets on games no longer listed are left out */
+ o.sp={};R.forEach((r,i)=>{const g=GM[((S.bets[i]||{}).legs||[{}])[0].g],k=g&&g.sp;if(!k||!SP[k])return;const q=o.sp[k]||(o.sp[k]={n:0,st:0,pr:0,w:0,l:0});q.n++;if(r.x&&r.x!=="v"){q.st=LBC.r2(q.st+r.k);q.pr=LBC.r2(q.pr+net(r))}if(r.x==="w")q.w++;if(r.x==="l")q.l++});return o};
 const _renderProfileLB=renderProfile;renderProfile=function(){_renderProfileLB();const pf=$("#pf");if(!pf)return;const st=lbSet();
  pf.insertAdjacentHTML("beforeend",`<div class="card lbpf"><h2>Leaderboard</h2>${!LB_SITE()?`<div class="tm">The leaderboard is on the public site (sidelinesportsbook.github.io/sideline).</div>`:`<div class="lbctl"><label class="lbsw"><input type="checkbox" data-lbprof="1"${st.prof?" checked":""}> Show my bet history on my public profile</label></div><div class="tm">Every player is on the leaderboard. Others see your username and checked results${st.prof?", and your recent settled bets":""}. Never your balance, open slip, password or login details.</div>`}<button class="lnk" data-pg="lb">Open the leaderboard</button></div>`)};
 /* the one-time notice: everyone is told they're on the leaderboard, and how to hide their bet history */

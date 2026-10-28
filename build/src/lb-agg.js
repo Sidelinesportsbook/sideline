@@ -19,6 +19,10 @@ async function readDocs(){const out=[];let tok="";
   tok=j.nextPageToken||""}while(tok);return out}
 (async()=>{if(!cfg)throw new Error("no firebase-config.json");
  const A=readJ(path.join(D,"results-archive.json"),{res:{},rp:{},ppd:{},ev:{}});["res","rp","ppd","ev"].forEach(k=>A[k]=A[k]||{});
+ /* games in progress from the live feed: their start time (so bets on them are checked and shown as pending) and the live
+    box score (a player "over" already passed is won, as the app settles it). Finals come only from the archive. */
+ const F=readJ(path.join(D,"feed.json"),{});A.lv={};Object.entries(F.ev||{}).forEach(([id,e])=>{const g="e"+id;if(e&&e.iso&&!A.ev[g]&&(e.state==="in"||e.state==="post"))A.ev[g]={sp:e.sp,iso:e.iso}});
+ Object.entries(F.live||{}).forEach(([g,v])=>{if(v&&v.p&&!A.res[g])A.lv[g]=v.p});
  const REG=readJ(path.join(D,"lb-registry.json"),{}),docs=await readDocs(),out=LBC.aggregate(docs,A,REG,Date.now());
  writeJ(path.join(D,"leaderboard.json"),out);writeJ(path.join(D,"lb-registry.json"),REG);
  /* the same memory, by public id, for the page's live ranking (it holds only what the public bet records already show) */

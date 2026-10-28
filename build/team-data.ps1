@@ -1,4 +1,4 @@
-# Team pages data: NBA (standings + schedule) and 111 soccer clubs (league/UCL standings + all-competition results & fixtures).
+﻿# Team pages data: NBA (standings + schedule) and 111 soccer clubs (league/UCL standings + all-competition results & fixtures).
 # Real ESPN data only; anything unavailable is null. Writes data\teams.json (atomically).
 $ErrorActionPreference = 'Stop'
 $sw = [Diagnostics.Stopwatch]::StartNew()
@@ -60,7 +60,7 @@ foreach ($id in $nbaIds) {
     $ha = if ($mo[0].homeAway -eq 'home') { 'vs' } else { '@' }; $opp = [string]$mo[1].team.abbreviation; $state = [string]$comp.status.type.state
     if ($state -eq 'post' -and $comp.status.type.name -notmatch 'POSTPONED|CANCELED') {
       $ms = Score $mo[0]; $os = Score $mo[1]; if ($null -eq $ms -or $null -eq $os) { continue }
-      $res.Add([pscustomobject]@{ d = [string]$ev.date; s = "$(([string]$ev.date).Substring(0,10))|$opp|$ha|$(if ($ms -gt $os) { 'W' } else { 'L' }) $([math]::Max($ms,$os))-$([math]::Min($ms,$os))" })
+      $res.Add([pscustomobject]@{ d = [string]$ev.date; s = "$(([string]$ev.date).Substring(0,10))|$opp|$ha|$(if ($ms -gt $os) { 'W' } else { 'L' }) $([math]::Max($ms,$os))-$([math]::Min($ms,$os))|$($ev.date)" })   # last field: exact tip-off, for local dates
     } elseif ($state -eq 'pre') { $fx.Add([pscustomobject]@{ d = [string]$ev.date; s = "$($ev.date)|$opp|$ha" }) }
   }
   $nba[$id].res = @($res | Sort-Object d -Descending | % { $_.s }); $nba[$id].fx = @($fx | Sort-Object d | Select-Object -First 5 | % { $_.s })
@@ -102,7 +102,7 @@ foreach ($t in $tidLg.Keys) {
       $ms = Score $mo[0]; $os = Score $mo[1]; if ($null -eq $ms -or $null -eq $os) { continue }
       $ha = if ($mo[0].homeAway -eq 'home') { 'vs' } else { '@' }; $wd = Wdl $ms $os
       $rows.Add([pscustomobject]@{ d = [string]$ev.date; slug = $slug; wd = $wd
-        s = "$(([string]$ev.date).Substring(0,10))|$($mo[1].team.displayName)|$ha|$wd $([math]::Max($ms,$os))-$([math]::Min($ms,$os))|$(if ($ev.league.abbreviation) { $ev.league.abbreviation } else { $ev.league.name })" })
+        s = "$(([string]$ev.date).Substring(0,10))|$($mo[1].team.displayName)|$ha|$wd $([math]::Max($ms,$os))-$([math]::Min($ms,$os))|$(if ($ev.league.abbreviation) { $ev.league.abbreviation } else { $ev.league.name })|$($ev.date)" })
     }
     $sorted = @($rows | Sort-Object d -Descending)
     $o.res = @($sorted | Select-Object -First 10 | % { $_.s })

@@ -1,5 +1,9 @@
 /* ---------- profile charts: drawn at real pixel size (no stretched text); green above zero, red below ---------- */
 const CH={h:190,pl:50,pr:14,pt:14,pb:26};
+/* when a game was played, in the viewer's own timezone: its exact start time where the data has it (game logs carry it as
+   their last field), otherwise midday UTC on its listed date */
+function gTime(d,iso){return iso&&/^\d{4}-\d\d-\d\dT\d/.test(iso)?Date.parse(iso):Date.parse(d+"T12:00Z")}
+function rowIso(f){return f.find(x=>/^\d{4}-\d\d-\d\dT\d/.test(x||""))}
 function nice(lo,hi,n){n=n||4;if(!(hi>lo)){lo-=1;hi+=1}const sp=(hi-lo)/n,mg=Math.pow(10,Math.floor(Math.log10(sp))),st=[1,2,2.5,5,10].map(x=>x*mg).find(x=>x>=sp),a=Math.floor(lo/st)*st,b=Math.ceil(hi/st)*st,t=[];for(let v=a;v<=b+st/2;v+=st)t.push(Math.round(v*100)/100);return t}
 const money0=v=>(v<0?"-":"")+"$"+Math.abs(v).toLocaleString("en-AU",{minimumFractionDigits:Math.abs(v)<10&&v%1?2:0,maximumFractionDigits:Math.abs(v)<10&&v%1?2:0});
 function chartW(){const e=$("#pf"),w=e&&e.clientWidth||360;return Math.max(240,Math.min(1060,w-32-30))}
@@ -31,17 +35,23 @@ function barSvg(v,o){o=o||{};if(!v.length)return`<div class="cempty">${o.empty||
  const bars=v.map((x,i)=>{if(!x)return"";const y=Math.min(Y(x),Y(0)),h=Math.max(2,Math.abs(Y(x)-Y(0)));return`<rect x="${(pl+i*bw+(bw-w)/2).toFixed(1)}" y="${y.toFixed(1)}" width="${w.toFixed(1)}" height="${h.toFixed(1)}" rx="${rx}" fill="${o.signed?(x>0?"var(--ov)":"var(--un)"):"var(--acc)"}"/>`}).join("");
  const step=Math.max(1,Math.ceil(v.length*30/(W-pl-pr))),xl=o.xl?o.xl.map((t,i)=>i%step&&i!==v.length-1?"":`<text x="${pl+i*bw+bw/2}" y="${H-7}" class="ax" text-anchor="middle">${t}</text>`).join(""):"";
  return`<svg class="ch" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(o.label||"Bar chart")}" ${tipAttr(v.map((x,i)=>[+(pl+i*bw+bw/2).toFixed(1),+Y(x).toFixed(1),o.tips?o.tips[i]:String(x)]))}>${grid}${bars}${xl}<line class="hv" x1="0" x2="0" y1="${pt}" y2="${H-pb}"/></svg>`}
-/* figures straight from the bet records: won = stake x odds - stake, lost = -stake, refunded/void = 0 */
-const betPL=b=>b.st==="won"?b.stake*b.odds-b.stake:b.st==="cash"&&b.co?b.co.amt-b.stake:b.st==="lost"?-b.stake:0;
-function cumPL(){const B=S.bets.filter(b=>b.st!=="open"&&b.t).sort((a,b)=>a.t-b.t);if(!B.length)return[];let c=0;const out=[{t:B[0].t,v:0,lab:"Start · $0.00"}];
- B.forEach(b=>{const p=betPL(b);c=Math.round((c+p)*100)/100;out.push({t:b.t,v:c,lab:`${fd(b.t)} · ${b.legs.length>1?"Multi":"Single"} ${b.st==="cash"?"cashed out":p>0?"won":p<0?"lost":b.st==="ref"?"refunded":"void"} ${p?sgn(p):""} · total ${sgn(c)}`})});return out}
-function dailyPL(){const d0=new Date(),t0=new Date(d0.getFullYear(),d0.getMonth(),d0.getDate()).getTime(),v=new Array(14).fill(0),n=new Array(14).fill(0);
- S.bets.forEach(b=>{if(b.st==="open"||!b.t)return;const i=13-Math.floor((t0+864e5-b.t)/864e5);if(i>=0&&i<14){v[i]=Math.round((v[i]+betPL(b))*100)/100;n[i]++}});
- return{v,lab:v.map((_,i)=>String(new Date(t0-(13-i)*864e5).getDate())),tips:v.map((x,i)=>`${fd(t0-(13-i)*864e5)} · ${n[i]} settled · ${n[i]?sgn(x):"no bets"}`)}}
-function plCharts(o){const cum=cumPL(),dl=dailyPL(),last=o.pl.length;
- return`<div class="card"><div class="chh"><h2>Profit / loss</h2><b class="${o.np>0?"won":o.np<0?"lost":""}">${sgn(o.np)}</b></div>${lineSvg(cum,{zero:1,label:"Cumulative profit and loss",empty:"Your profit line starts after your first settled bet."})}<div class="pl"><span>Cumulative, in the order bets were placed</span><span>${o.w+o.l} settled</span></div></div>
- <div class="card"><div class="chh"><h2>Daily profit / loss</h2><span class="tm">Last 14 days</span></div>${dl.v.some(x=>x)||S.bets.some(b=>b.st!=="open")?barSvg(dl.v,{signed:1,money:1,xl:dl.lab,tips:dl.tips,label:"Daily profit and loss"}):'<div class="cempty">No settled bets in the last 14 days.</div>'}</div>
- <div class="card"><div class="chh"><h2>Result per settled bet</h2><span class="tm">${last?"Last "+last:""}</span></div>${barSvg(o.pl,{signed:1,money:1,tips:o.plt,label:"Profit or loss per bet",empty:"No settled bets yet."})}${last?`<div class="pl"><span>Best <b class="won">${sgn(Math.max(0,...o.pl))}</b></span><span>Worst <b class="${Math.min(0,...o.pl)<0?"lost":""}">${sgn(Math.min(0,...o.pl))}</b></span><span>Average <b class="${o.np>0?"won":o.np<0?"lost":""}">${sgn(o.np/last)}</b></span></div>`:""}</div>
+/* the profile charts use the same records as the stat cards and the leaderboard (lbcore fromBet), so the line, the bars and
+   the totals can't disagree: a bet counts when it settles, at its settlement time, and its profit is return - stake (won =
+   stake x final odds, a cash-out the amount taken, a refund 0); voids are left out. (They used to group bets by the day they
+   were placed and leave cash-outs out of the per-bet chart while its average still included them.) */
+const PLW={w:"won",l:"lost",c:"cashed out",r:"refunded"};
+function plSet(){let R=null;try{R=myRecs()}catch(e){}return(R||[]).filter(r=>r.x&&r.x!=="v").sort((a,b)=>a.s-b.s||a.t-b.t)}
+const plNet=r=>Math.round((r.r-r.k)*100)/100;
+function cumPL(R){R=R||plSet();if(!R.length)return[];let c=0;const out=[{t:R[0].s,v:0,lab:"Start · $0.00"}];
+ R.forEach(r=>{const p=plNet(r);c=Math.round((c+p)*100)/100;out.push({t:r.s,v:c,lab:`${fd(r.s)} · ${r.n>1?"Multi":"Single"} ${PLW[r.x]} ${p?sgn(p):"$0.00"} · total ${sgn(c)}`})});return out}
+/* the last 14 calendar days in your own timezone, by the day each bet settled */
+function dailyPL(R){R=R||plSet();const d0=new Date(),days=[...Array(14).keys()].map(i=>new Date(d0.getFullYear(),d0.getMonth(),d0.getDate()-13+i)),key=t=>new Date(t).toDateString(),ix={};days.forEach((d,i)=>ix[d.toDateString()]=i);
+ const v=new Array(14).fill(0),n=new Array(14).fill(0);R.forEach(r=>{const i=ix[key(r.s)];if(i!==undefined){v[i]=Math.round((v[i]+plNet(r))*100)/100;n[i]++}});
+ return{v,n,lab:days.map(d=>String(d.getDate())),tips:days.map((d,i)=>`${fd(d.getTime())} · ${n[i]?n[i]+" settled · "+sgn(v[i]):"no bets settled"}`)}}
+function plCharts(o){const R=plSet(),cum=cumPL(R),dl=dailyPL(R),pl=R.map(plNet),net=Math.round(pl.reduce((a,b)=>a+b,0)*100)/100,last=pl.length;
+ return`<div class="card"><div class="chh"><h2>Profit / loss</h2><b class="${net>0?"won":net<0?"lost":""}">${sgn(net)}</b></div>${lineSvg(cum,{zero:1,label:"Cumulative profit and loss",empty:"Your profit line starts after your first settled bet."})}<div class="pl"><span>Running total, in the order bets settled</span><span>${last} settled</span></div></div>
+ <div class="card"><div class="chh"><h2>Daily profit / loss</h2><span class="tm">Last 14 days · by the day bets settled</span></div>${dl.n.some(x=>x)?barSvg(dl.v,{signed:1,money:1,xl:dl.lab,tips:dl.tips,label:"Daily profit and loss"}):'<div class="cempty">No bets settled in the last 14 days.</div>'}</div>
+ <div class="card"><div class="chh"><h2>Result per settled bet</h2><span class="tm">${last?last+" bet"+(last===1?"":"s")+", oldest first":""}</span></div>${barSvg(pl,{signed:1,money:1,tips:R.map((r,i)=>`${fd(r.s)} · ${r.n>1?"Multi":"Single"} ${PLW[r.x]} ${sgn(pl[i])}`),label:"Profit or loss per bet",empty:"No settled bets yet."})}${last?`<div class="pl"><span>Best <b class="won">${sgn(Math.max(0,...pl))}</b></span><span>Worst <b class="${Math.min(0,...pl)<0?"lost":""}">${sgn(Math.min(0,...pl))}</b></span><span>Average <b class="${net>0?"won":net<0?"lost":""}">${sgn(net/last)}</b></span></div>`:""}</div>
  <div class="card"><div class="chh"><h2>Balance</h2><b>${$$(S.bal)}</b></div>${lineSvg((S.hist||[]).map(h=>({t:h.t,v:h.b,lab:`${fd(h.t)} · ${$$(h.b)}`})),{label:"Balance over time",empty:"Your balance history starts with your first bet."})}</div>`}
 (()=>{let tip=null;const hide=()=>{if(tip)tip.hidden=true;document.querySelectorAll("svg.ch.on").forEach(s=>s.classList.remove("on"))};
  /* hover with a mouse, tap or drag with a finger */

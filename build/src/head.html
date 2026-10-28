@@ -437,7 +437,7 @@ header{background:color-mix(in srgb,var(--card) 82%,transparent)!important;-webk
 .scleg .lz.zn2,.scleg .lz.zn1,.scleg .lz.zn0,.scleg .lz.zm1,.scleg .lz.zm2{border:1px solid var(--line)}.scleg .hgr i{width:70px;background:linear-gradient(90deg,color-mix(in srgb,var(--acc) 14%,transparent),var(--acc))}
 .scleg .lb{background:color-mix(in srgb,var(--acc) 60%,transparent)}.scleg .ll{height:2px;width:16px;background:var(--tx);border-radius:1px}.scleg .ld{height:2px;width:16px;background:repeating-linear-gradient(90deg,var(--tx) 0 5px,transparent 5px 8px);border-radius:0}
 .scleg .lna{border:1px dashed var(--mut)}.scleg .lo{border-radius:50%;border:2px solid var(--mut);width:10px;height:10px}.scleg .lt{width:0;height:0;border-left:6px solid transparent;border-right:6px solid transparent;border-bottom:10px solid var(--mut);border-radius:0}
-.scleg .lm.n{background:var(--mut)}.scleg .lx.n{color:var(--mut)}.scleg .lh{background:var(--th,var(--acc));border-radius:50%;width:10px;height:10px}.scleg .la{background:var(--ta,var(--tB));border-radius:50%;width:10px;height:10px}
+.scleg .lm.n{background:var(--acc)}.scleg .lx.n{color:var(--acc)}.scleg .lh{background:var(--th,var(--acc));border-radius:50%;width:10px;height:10px}.scleg .la{background:var(--ta,var(--tB));border-radius:50%;width:10px;height:10px}
 .gbsp{flex:none;width:1px;align-self:stretch;margin:3px 6px;background:var(--line)}
 .scsel{background:var(--btn);border:1px solid var(--line);border-radius:7px;color:var(--tx);padding:3px 6px;font-size:12px;font-weight:600;max-width:170px;flex:none}
 /* chart bars stay neutral: a red or green club colour would read as a loss or a win */
@@ -458,6 +458,33 @@ header{background:color-mix(in srgb,var(--card) 82%,transparent)!important;-webk
 #games .mh,#games .card:has(>.hero){position:relative;overflow:hidden}
 #games .mh::before,#games .card:has(>.hero)::before{content:"";position:absolute;left:0;right:0;top:0;height:3px;background:linear-gradient(90deg,var(--tl,transparent) 0 50%,var(--tr,transparent) 50% 100%)}
 .ps.tcs{border-top:3px solid var(--tc)}.ps.tcs .ptb button.on,.ps.tcs .tabs button.on{border-bottom-color:var(--tc)}
+/* hardwood court (shot markers) and grass pitch */
+.ctc.hw .ctl{stroke:rgba(255,255,255,.92);stroke-width:1.6}.ctc.hw .ctl .ctb{stroke:#fff;stroke-width:2.6}.ctc.hw .ctl .ctr{stroke:#ff7a2f;stroke-width:2.2}
+.hwj{stroke:rgba(70,40,12,.22);stroke-width:.9}.hwp{opacity:.6}.hwl{opacity:.5}.hwsh{fill:rgba(8,8,12,.16)}
+@media (prefers-color-scheme:light){:root:not([data-theme="dark"]) .hwsh{fill:transparent}}:root[data-theme="light"] .hwsh{fill:transparent}
+.ctc.hw .shm .mk{fill:#14904a;stroke:#fff;stroke-width:1.6}.ctc.hw .shm .mx{stroke:#d1281c;stroke-width:2.4}.mxw{fill:none;stroke:#fff;stroke-width:4.2;stroke-linecap:round;opacity:0}.ctc.hw .mxw,.pitch .mxw{opacity:.85}
+.gr0,.gr1{fill:#2f7540}.gr2{fill:#2a6838}.pitch .ctl{stroke:rgba(255,255,255,.9);stroke-width:1.5}.pitch .ctl .ctr{fill:#fff;stroke:none}.pitch .ctl .ctb{stroke:#fff;stroke-width:3}
+.gnet{stroke:rgba(255,255,255,.85);stroke-width:1}.gnl{stroke:rgba(255,255,255,.45);stroke-width:.6;fill:none}
+.pitch .shm .sg-g{stroke:#fff;stroke-width:1.6}.pitch .shm .sg-o{stroke-width:2.6}.pitch .shm .sg-o,.pitch .shm .sg-b{filter:drop-shadow(0 0 1.2px rgba(255,255,255,.95))}
+/* Today's summary (top of Home) */
+.dsum{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin:0 0 12px}
+.dshd{display:flex;justify-content:space-between;align-items:flex-end;gap:8px 12px;flex-wrap:wrap;margin-bottom:10px}.dshd small{color:var(--mut);font-size:12px}.dshd .lvb{vertical-align:1px;margin-left:4px}
+h2.dsti{margin:0 0 2px;font:700 22px/1.1 var(--fd);letter-spacing:.3px;text-transform:none;color:var(--tx)}.dsf{margin:0}
+.dsgr{display:grid;gap:10px;grid-template-columns:minmax(0,1fr)}@media(min-width:900px){.dsgr{grid-template-columns:repeat(2,minmax(0,1fr))}.dsme{grid-column:1/-1}}
+.dsbx{background:var(--raise);border:1px solid var(--line);border-radius:12px;padding:10px 12px;min-width:0}
+.dsbh{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:4px}.dsbh h3{margin:0;font:700 13px var(--fd);letter-spacing:1.2px;text-transform:uppercase;color:var(--mut)}.dsbh .tm{font-size:11.5px}.lvt{color:var(--un)}
+.dsgm{border-top:1px solid var(--line)}.dsgm:first-of-type{border-top:0}.dsgm summary{display:grid;grid-template-columns:auto minmax(0,1fr) minmax(0,1fr) 12px;gap:8px;align-items:center;padding:8px 0;cursor:pointer;list-style:none}.dsgm summary::-webkit-details-marker{display:none}
+.dsch{font-size:11px;font-weight:700;padding:2px 7px;border-radius:6px;white-space:nowrap;min-width:62px;text-align:center;font-variant-numeric:tabular-nums}.dsch.lv{background:color-mix(in srgb,var(--un) 16%,transparent);color:var(--tx)}.dsch.lv i{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--un);margin-right:5px;vertical-align:1px;animation:fstp 1.6s ease-in-out infinite}
+.dsch.fn{background:var(--line);color:var(--mut)}.dsch.up{border:1px solid var(--line);color:var(--mut)}
+.dst{display:flex;align-items:center;gap:6px;min-width:0;color:var(--mut)}.dst b{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.dst em{font-style:normal;margin-left:auto;padding-right:4px;font:700 17px var(--fd);color:var(--mut);font-variant-numeric:tabular-nums}.dst.w b,.dst.w em{color:var(--tx)}
+.dscv{font-style:normal;color:var(--mut);transition:transform .2s var(--ease);text-align:center}.dsgm[open] .dscv{transform:rotate(90deg)}.dsgx{padding:0 0 8px;animation:fade .18s ease both}
+.dspf{display:flex;gap:10px;align-items:center;padding:7px 0;border-top:1px solid var(--line)}.dsbh+.dspf,.dsgx>.dspf:first-child{border-top:0}.dspn{min-width:0;display:block;font-size:13px}.dspn small{display:block;color:var(--mut);font-size:12px;margin-top:1px}.dspn small b{color:var(--tx)}
+.dsb{display:inline-block;font-size:9.5px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;padding:1px 6px;border-radius:5px;background:var(--line);color:var(--tx);margin-left:4px;vertical-align:1px}.dsb.hi{background:color-mix(in srgb,var(--ov) 26%,transparent)}.dsb.lv{background:color-mix(in srgb,var(--un) 26%,transparent)}
+.dsmore,.dslink{background:none;border:0;color:var(--acc);font-weight:700;font-size:12px;padding:6px 0 0;cursor:pointer}.dsmore{display:block}.dsem{color:var(--mut);font-size:13px;padding:8px 0}.dslg{object-fit:contain;flex:none}
+.dsnet{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}.dsnet b{font:700 28px/1.1 var(--fd);font-variant-numeric:tabular-nums}.dsnet small{color:var(--mut);font-size:12px}
+.dsrec{display:flex;gap:12px;flex-wrap:wrap;font-weight:700;font-size:13px;margin:4px 0}.dskv{display:flex;gap:16px;flex-wrap:wrap;font-size:12px;color:var(--mut)}.dskv b{color:var(--tx)}
+.dsopen{font-size:12px;color:var(--mut);margin-top:8px;padding-top:8px;border-top:1px dashed var(--line)}.dsopen b{color:var(--tx)}
+@media(max-width:520px){.dsum{padding:12px;border-radius:12px}h2.dsti{font-size:20px}.dsgm summary{grid-template-columns:auto minmax(0,1fr) minmax(0,1fr) 10px;gap:6px}.dsch{min-width:54px}}
 /* wide screens: a game card's three markets sit side by side (Head to head | Line | Total), each team's price under the other,
    so a card is about half as tall and every price sits next to its label */
 @media(min-width:900px){#games .card:has(>.mk){display:grid;grid-template-columns:repeat(3,minmax(0,1fr));column-gap:10px;align-items:start}

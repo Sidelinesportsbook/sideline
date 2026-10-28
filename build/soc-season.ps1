@@ -19,9 +19,9 @@ function Mins($s) { $m = [regex]::Matches([string]$s, '\d+'); if (-not $m.Count)
 $cache = @{}; if (Test-Path $cacheF) { ([IO.File]::ReadAllText($cacheF) | ConvertFrom-Json).PSObject.Properties | % { $cache[$_.Name] = $_.Value } }
 $now = (Get-Date).ToUniversalTime(); $nd = [int]($now.Date - $START).TotalDays
 $sbu = @(foreach ($c in $COMPS) { 0..$nd | % { "$EB$c/scoreboard?dates=$($START.AddDays($_).ToString('yyyyMMdd'))" } }); $sbr = Fetch $sbu
-$need = @{}
+$need = @{}; $ISO = @{}   # each match's exact kick-off (UTC), so the site shows dates in the viewer's own timezone
 foreach ($u in $sbu) { if (-not $sbr[$u]) { continue }; $sj = $sbr[$u] | ConvertFrom-Json; $comp = @($COMPS | ? { $u -like "*/$_/*" })[0]
-  foreach ($ev in $sj.events) { $tt = $ev.status.type; $id = [string]$ev.id; if ($tt.state -ne 'post' -or $tt.name -match 'POSTPONED|CANCELED|ABANDONED') { continue }
+  foreach ($ev in $sj.events) { $tt = $ev.status.type; $id = [string]$ev.id; $ISO[$id] = [string]$ev.date; if ($tt.state -ne 'post' -or $tt.name -match 'POSTPONED|CANCELED|ABANDONED') { continue }
     $c = $cache[$id]; $old = $c -and ($now - [datetime]::Parse([string]$ev.date).ToUniversalTime()).TotalHours -lt 36 -and ($now - [datetime]::Parse([string]$c.at).ToUniversalTime()).TotalHours -ge 2
     if (-not $c -or $old) { $need[$id] = "$EB$comp/summary?event=$id|$comp" } } }
 $smr = if ($need.Count) { Fetch @($need.Values | % { ($_ -split '\|')[0] }) } else { @{} }
@@ -63,14 +63,15 @@ $P = @{}; $PS = @{}; $TG = @{}; $TSH = @{}; $stamp = $now.ToString('yyyy-MM-ddTH
 foreach ($id in $cache.Keys) { $m = $cache[$id]
   foreach ($s in 'h', 'a') { $o = if ($s -eq 'h') { 'a' } else { 'h' }; $me = $m.$s; $op = $m.$o; $res = "$(if ($me.sc -gt $op.sc) { 'W' } elseif ($me.sc -lt $op.sc) { 'L' } else { 'D' }) $($me.sc)-$($op.sc)"
     if (-not $TG.ContainsKey($me.id)) { $TG[$me.id] = [Collections.Generic.List[object]]::new(); $TSH[$me.id] = [Collections.Generic.List[string]]::new() }
-    $TG[$me.id].Add([ordered]@{ e = $id; d = $m.d; c = $m.c; o = $op.ab; on = $op.n; oid = $op.id; ha = $(if ($s -eq 'h') { 'vs' } else { '@' }); gf = $me.sc; ga = $op.sc; ht = @($me.ht, $op.ht); s = @($m.ts.$s); os = @($m.ts.$o)
+    $kick = if ($ISO[$id]) { $ISO[$id] } else { [string]$m.d }
+    $TG[$me.id].Add([ordered]@{ e = $id; d = $m.d; iso = $kick; c = $m.c; o = $op.ab; on = $op.n; oid = $op.id; ha = $(if ($s -eq 'h') { 'vs' } else { '@' }); gf = $me.sc; ga = $op.sc; ht = @($me.ht, $op.ht); s = @($m.ts.$s); os = @($m.ts.$o)
       gl = [string[]]@(@($m.gl) | ? { $_ } | % { $f = $_ -split '\|'; "$($f[0])|$(if ($f[1] -eq $s) { 1 } else { 0 })|$($f[2])|$($f[3])" }) })
     foreach ($x in @($m.sh)) { if (-not $x) { continue }; $f = $x -split '\|'; $TSH[$me.id].Add((@($id, $(if ($f[0] -eq $s) { 1 } else { 0 })) + $f[1..7]) -join '|') }
     foreach ($x in @($m.pl)) { if (-not $x) { continue }; $f = $x -split '\|'; if ($f[1] -ne $s) { continue }; if (-not $P.ContainsKey($f[0])) { $P[$f[0]] = [Collections.Generic.List[string]]::new() }
-      $P[$f[0]].Add((@($id, $m.d, $m.c, $op.ab, $op.n, $(if ($s -eq 'h') { 'vs' } else { '@' }), $res) + $f[2..17]) -join '|') } }
+      $P[$f[0]].Add((@($id, $m.d, $m.c, $op.ab, $op.n, $(if ($s -eq 'h') { 'vs' } else { '@' }), $res) + $f[2..17] + @($kick)) -join '|') } }
   foreach ($x in @($m.sh)) { if (-not $x) { continue }; $f = $x -split '\|'; if (-not $f[1]) { continue }; if (-not $PS.ContainsKey($f[1])) { $PS[$f[1]] = [Collections.Generic.List[string]]::new() }; $PS[$f[1]].Add((@($id) + $f[2..7]) -join '|') } }
 $wf = { param($n, $o) [IO.File]::WriteAllText((Join-Path $paD "$n.json"), ($o | ConvertTo-Json -Depth 5 -Compress), [Text.UTF8Encoding]::new($false)) }
-foreach ($k in $P.Keys) { $rows = [string[]]@($P[$k] | Sort-Object { ($_ -split '\|')[1] } -Descending); $sh = [string[]]@(); if ($PS.ContainsKey($k)) { $sh = [string[]]$PS[$k].ToArray() }
+foreach ($k in $P.Keys) { $rows = [string[]]@($P[$k] | Sort-Object { ($_ -split '\|')[23] } -Descending); $sh = [string[]]@(); if ($PS.ContainsKey($k)) { $sh = [string[]]$PS[$k].ToArray() }
   & $wf "s$k" ([ordered]@{ v = 1; id = $k; at = $stamp; rows = $rows; sh = $sh }) }
-foreach ($k in $TG.Keys) { & $wf "st$k" ([ordered]@{ v = 1; id = $k; at = $stamp; cols = $TSK; g = [object[]]@($TG[$k] | Sort-Object { $_.d } -Descending); sh = [string[]]$TSH[$k].ToArray() }) }
+foreach ($k in $TG.Keys) { & $wf "st$k" ([ordered]@{ v = 1; id = $k; at = $stamp; cols = $TSK; g = [object[]]@($TG[$k] | Sort-Object { $_.iso } -Descending); sh = [string[]]$TSH[$k].ToArray() }) }
 "SOC_SEASON matches=$($cache.Count) new=$added players=$($P.Count) teams=$($TG.Count)"

@@ -12,6 +12,8 @@ Step 'PointsBet prices' 'pb-data.ps1'
 if (-not (Test-Path "$R\data\results-archive.done")) { Write-Host '== Results archive (last 3 weeks)'; & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $R 'live-feed.ps1') -Days 21; if (-not $LASTEXITCODE) { [IO.File]::WriteAllText("$R\data\results-archive.done", (Get-Date).ToString('o')) } }
 Step 'Live feed snapshot' 'live-feed.ps1'
 # leaderboard: opted-in players' bets checked against the archive (node is on every GitHub runner); a failure keeps the last one
+# the leaderboard and profile rules are tested first (lbcore.test.js); a failure stops the publish and the site keeps its last version
+Write-Host '== Leaderboard rule tests'; & node (Join-Path $R 'src\lbcore.test.js'); if ($LASTEXITCODE) { throw 'Leaderboard rule tests failed; not publishing' }
 Write-Host '== Leaderboard'; try { & node (Join-Path $R 'src\lb-agg.js'); if ($LASTEXITCODE) { Write-Warning "Leaderboard not updated (exit $LASTEXITCODE); keeping the last one" } } catch { Write-Warning "Leaderboard not updated: $_" }
 # sanity checks before publishing
 $d = [IO.File]::ReadAllText("$R\data\sideline-data.json") | ConvertFrom-Json

@@ -17,9 +17,12 @@ const LBC=(()=>{
  const COMB={pra:["pts","reb","ast"],pr:["pts","reb"],pa:["pts","ast"],ra:["reb","ast"],ga:["g","sa"]};
  const stat=(v,st)=>{if(!v)return;if(st==="dd"||st==="td"){const n=["pts","reb","ast","stl","blk"].filter(q=>v[q]>=10).length;return n>=(st==="dd"?2:3)?1:0}return COMB[st]?COMB[st].reduce((q,k)=>q+v[k],0):v[st]};
  const legWin=(l,h,a)=>l.m==="h"?(l.s==="h"?h>a:l.s==="a"?a>h:h===a):l.m==="s"?(l.s==="h"?h+l.line>a:a+l.line>h):l.m==="b"?(l.s==="y"?h>0&&a>0:!(h>0&&a>0)):l.m==="dc"?(l.s==="1x"?h>=a:l.s==="x2"?a>=h:h!==a):l.m==="tg"?((l.s[1]==="o")?(l.s[0]==="h"?h:a)>l.line:(l.s[0]==="h"?h:a)<l.line):(l.s==="o"?h+a>l.line:h+a<l.line);
- /* a leg judged from the official final result and box score (A = {res, rp, ppd, ev}), with the app's settlement rules:
-    "w" / "l", "v" (postponed, or the player did not play), "" (no final result yet) */
- function legResult(l,A){if(A.ppd&&A.ppd[l.g])return"v";const r=A.res&&A.res[l.g];if(!r)return"";
+ /* a leg judged from the official final result and box score (A = {res, rp, ppd, ev, lv}), with the app's settlement rules:
+    "w" / "l", "v" (postponed, or the player did not play), "" (no final result yet).
+    During a game (A.lv = the live box score) a player "over" that has already been passed is won, as the app settles it:
+    the figure can only go up. Nothing else is decided before the final. */
+ function legResult(l,A){if(A.ppd&&A.ppd[l.g])return"v";const r=A.res&&A.res[l.g];
+  if(!r){const lv=A.lv&&A.lv[l.g];if(lv&&l.m==="p"&&(l.s==="o"||l.s==="k")){const x=stat(lv[l.pl],l.st);if(x!==undefined&&!isNaN(x)&&(l.s==="k"?x>=l.line:x>l.line))return"w"}return""}
   if(l.m==="p"){const box=A.rp&&A.rp[l.g];if(!box||!Object.keys(box).length)return"";const x=stat(box[l.pl],l.st);if(x===undefined||isNaN(x))return"v";return(l.s==="k"?x>=l.line:l.s==="o"?x>l.line:x<l.line)?"w":"l"}
   return legWin(l,r[0],r[1])?"w":"l"}
  function betResult(rs,ins){const lost=rs.filter(r=>r==="l").length;if(lost>=2||(lost===1&&!ins))return"l";if(rs.some(r=>!r))return"";if(lost===1)return"r";if(rs.every(r=>r==="v"))return"v";return"w"}
@@ -69,7 +72,9 @@ const LBC=(()=>{
   bets.forEach(b=>{const k=key(b),h=core(b),evs=b.legs.map(l=>A.ev[l.g]),known=evs.every(Boolean),start=known?Math.min(...evs.map(e=>Date.parse(e.iso))):null;let s=seen[k];
    if(!s){s=seen[k]={h,f:doc.upd};if(prev&&start!==null&&prev>start+6e4)s.late=1}
    if(s.h!==h){out.bad.edited++;return}if(s.late||(known&&b.t>start+12e4)){out.bad.late++;return}
-   if(!known){if(b.st==="open"&&!b.co)J.push({b,legs:b.legs,x:"",sp:["?"],at:0});else out.unv++;return}   /* games not final yet: pending; a settled bet on a game without an official result isn't counted */
+   /* a game the results don't know yet (not started, or not in the feed): the bet is pending, whatever the player's copy says,
+      until the official result arrives (it used to be dropped from the table if the copy already said won or lost) */
+   if(!known){J.push({b,legs:b.legs,x:"",sp:["?"],at:0});if(b.st!=="open"||b.co)out.unv++;return}
    const legs=b.legs.map(l=>({...l,r:legResult(l,A)})),sr=betResult(legs.map(l=>l.r),b.ins),sp=[...new Set(evs.map(e=>e.sp))];
    if(sr&&!s.dec&&!b.co)s.dec=now;if(b.co&&!s.cof)s.cof=now;
    const lossAt=(()=>{const L=legs.map((l,i)=>l.r==="l"?endOfEv(evs[i]):null).filter(x=>x!==null).sort((a,b)=>a-b);return L[b.ins?1:0]??null})();
