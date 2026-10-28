@@ -30,7 +30,8 @@ async function runAppTests(o){o=o||{};const out=[],ok=(name,cond,info)=>out.push
   const labs=[...host.querySelectorAll(".dzl")].map(t=>t.textContent.trim()),lo=paths[order.indexOf("c3r")];host.remove();
   ok("zone chart: drawn zones match the zone rules and don't overlap",!miss.length,miss.slice(0,6).join(" "));
   ok("zone chart: label is made ÷ attempted, rounded (9/20 = 45%)",labs.includes("45%"),labs.join(","));
-  ok("zone chart: a zone with under 5 attempts is grey, not coloured",lo.classList.contains("dzlo")&&!lo.getAttribute("style"),lo.outerHTML.slice(0,120))}
+  {const D=[{d:2,m:1,x:25,y:3},{d:3,m:0,x:25,y:4},{d:4,m:1,x:25,y:5},{d:22,m:0,x:3,y:8},{d:23,m:1,x:3,y:9},{d:null,m:1,x:25,y:HY+30}],B=distBands(D);
+   ok("shot distance: bands hold every attempt once (0-3, 4-9 ... 28+), using ESPN's distance or the coordinates",B.reduce((a,b)=>a+b.a,0)===D.length&&B[0].a===2&&B[0].m===1&&B[1].a===1&&B[3].a===1&&B[4].a===1&&B[5].a===1&&B[5].m===1,JSON.stringify(B))}  ok("zone chart: a zone with under 5 attempts is grey, not coloured",lo.classList.contains("dzlo")&&!lo.getAttribute("style"),lo.outerHTML.slice(0,120))}
  /* play-by-play score: added up from scoring plays when they match the official score; ESPN's own otherwise */
  {const mc={fin:1,sc:{h:5,a:2},psum:{h:5,a:2,df:1},pbp:[]},f=pbScore(mc),bad=pbScore({fin:1,sc:{h:6,a:2},psum:{h:5,a:2}}),live=pbScore({fin:0,sc:{h:7,a:2},psum:{h:5,a:2}});
   ok("rebuilt running score used when it matches the official score",f.ok&&f({ch:3,ca:2,h:4,a:2})==="2–3");ok("ESPN's own score kept when the totals disagree",!bad.ok&&bad({ch:3,ca:2,h:4,a:2})==="2–4");ok("live: rebuilt score kept while the feed is behind",live.ok)}

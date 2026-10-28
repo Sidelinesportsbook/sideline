@@ -21,7 +21,7 @@ function Method($comp, [string]$mn) {
   if ($comp -eq 'nba') { if ($mn -eq 'Outright Winner') { return @{ how = 'series'; slug = 'basketball/nba'; pat = '^NBA Finals' } }
     if ($mn -eq 'Eastern Conference Winner') { return @{ how = 'series'; slug = 'basketball/nba'; pat = '^East Finals' } }
     if ($mn -eq 'Western Conference Winner') { return @{ how = 'series'; slug = 'basketball/nba'; pat = '^West Finals' } } }
-  if ($comp -eq 'nfl') { if ($mn -match '^Super Bowl') { return @{ how = 'game'; slug = 'football/nfl'; pat = '^Super Bowl' } }
+  if ($comp -eq 'nfl') { if ($mn -match '^Super Bowl [IVXLC]+$') { return @{ how = 'game'; slug = 'football/nfl'; pat = '^Super Bowl' } }
     if ($mn -eq 'AFC Championship Winner') { return @{ how = 'game'; slug = 'football/nfl'; pat = '^AFC Championship' } }
     if ($mn -eq 'NFC Championship Winner') { return @{ how = 'game'; slug = 'football/nfl'; pat = '^NFC Championship' } } }
   return $null }

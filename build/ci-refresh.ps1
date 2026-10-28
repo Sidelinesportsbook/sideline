@@ -5,7 +5,7 @@ param([switch]$Full)
 $ErrorActionPreference = 'Stop'; $R = $PSScriptRoot; Set-Location $R
 function Step($name, $file) { Write-Host "== $name"; & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $R $file); if ($LASTEXITCODE) { Write-Warning "$name failed (exit $LASTEXITCODE); keeping the last good data" } }
 New-Item -ItemType Directory -Force (Join-Path $R 'data') | Out-Null
-if ($Full) { Step 'ESPN build (rosters, squads, logs, fixtures, lines)' 'build-data.ps1' } else { Step 'Team data' 'team-data.ps1'; Step 'NBA season stats' 'nba-season.ps1' }
+if ($Full) { Step 'ESPN build (rosters, squads, logs, fixtures, lines)' 'build-data.ps1' } else { Step 'Team data' 'team-data.ps1'; Step 'NBA season stats' 'nba-season.ps1'; Step 'Cup fixtures (FA Cup, Carabao Cup, Europa League)' 'cup-fixtures.ps1' }
 Step 'Soccer season (Premier League, Champions League)' 'soc-season.ps1'
 Step 'PointsBet prices' 'pb-data.ps1'
 # Special Bets: PointsBet futures, then the official results for the markets the app takes bets on (checked against last season's results first)

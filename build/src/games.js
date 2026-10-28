@@ -17,6 +17,9 @@ function mkG(x,legacy){const sp=x.sp,iso=x.iso,h=SAL0[x.h]||x.h,a=SAL0[x.a]||x.a
   o.T=T;const sh2=Math.max(.25,Math.min(.75,.5+.55*(o.p-(1-o.p-o.pd)))),lh=T*sh2,la=T-lh,pb=(1-Math.exp(-lh))*(1-Math.exp(-la));o.by=od(pb,1.06);o.bn=od(1-pb,1.06)}
  if(soc&&!legacy)pbApply(o);
  if(sp==="nba"&&!legacy&&!o.bk)pbApplyNBA(o);
+ /* no real price: no sportsbook line (DraftKings via ESPN, or PointsBet) and no ESPN projection. The figures above are then only
+    a placeholder, so the game shows "no prices yet" and takes no bets (polish.js) until a bookmaker prices it. */
+ if(!legacy&&!o.bk&&x.ph==null)o.np=1;
  return o}
 /* PointsBet (AU) soccer prices: kept in their own JSON, applied on top of ESPN fixtures by team + kick-off match */
 const PBD=JSON.parse((document.getElementById("pbd")||{}).textContent||"null")||{events:[]};

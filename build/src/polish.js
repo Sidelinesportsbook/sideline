@@ -45,3 +45,7 @@ function socColMap(){if(window.__SCOL)return window.__SCOL;let raw={};try{raw=JS
 function socCol(n){if(!n)return;const m=socColMap();let c=m[n];if(!c){try{const k=Object.keys(m).find(x=>teq(x,n));c=k&&m[k]}catch(e){}}return c&&c.c?{n,c:c.c,c2:c.c2||"ffffff"}:undefined}
 const colLum=h=>{const p=[0,2,4].map(i=>parseInt(String(h).replace("#","").slice(i,i+2),16));return .2126*p[0]+.7152*p[1]+.0722*p[2]};
 function teamColour(n,alt){const t=TBY[n]||socCol(n);if(!t)return null;const a=[alt?t.c2:t.c,alt?t.c:t.c2].filter(Boolean).map(x=>"#"+String(x).replace("#",""));return a.find(x=>colLum(x)>45)||"#8f939b"}
+/* a game with no real price yet (games.js: g.np) shows a note instead of odds and takes no bets, from any market or page */
+const NP_NOTE=`<div class="npx"><b>No prices yet.</b> This match opens for bets once a bookmaker prices it (DraftKings via ESPN, or PointsBet), usually a few days before kick-off.</div>`;
+const _mktsNP=mkts;mkts=function(g){return g&&g.np?NP_NOTE:_mktsNP.apply(this,arguments)};
+document.addEventListener("click",e=>{const b=e.target&&e.target.closest&&e.target.closest("[data-g]"),g=b&&GM[b.dataset.g];if(g&&g.np){e.stopPropagation();e.preventDefault()}},true);

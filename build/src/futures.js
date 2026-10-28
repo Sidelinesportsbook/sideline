@@ -10,7 +10,12 @@
 var FUT={d:null,res:{},at:0,err:"",busy:0},FV={sp:"all",comp:"",kind:"all",q:"",mk:"",sel:"",all:0};
 var FLEAGUE={epl:1,laliga:1,seriea:1,bund:1,ligue1:1},FCUP={ucl:1,uel:1,uecl:1,fac:1,lgc:1,wc:1};
 function fSettles(c,mn){if(FLEAGUE[c])return mn==="Outright Winner"||(c==="epl"&&(mn==="To Finish Top 4"||mn==="To Be Relegated"));if(FCUP[c])return mn==="Outright Winner";
- if(c==="nba")return/^(Outright Winner|Eastern Conference Winner|Western Conference Winner)$/.test(mn);if(c==="nfl")return/^Super Bowl|^(AFC|NFC) Championship Winner$/.test(mn);return false}
+ if(c==="nba")return/^(Outright Winner|Eastern Conference Winner|Western Conference Winner)$/.test(mn);if(c==="nfl")return/^Super Bowl [IVXLC]+$|^(AFC|NFC) Championship Winner$/.test(mn);return false}
+/* what the page offers: no Scottish Premiership or World Cup; the NBA's champion, conference winners and individual awards; the
+   NFL's Super Bowl winner only. Hidden markets stay in futures.json, so a bet already placed on one still settles and shows. */
+var FHIDE={spl:1,wc:1};
+function fShow(c,m){if(FHIDE[c.id])return false;if(c.id==="nba")return m.k==="award"||/^(Outright Winner|Eastern Conference Winner|Western Conference Winner)$/.test(m.n);if(c.id==="nfl")return/^Super Bowl [IVXLC]+$/.test(m.n);return true}
+function fComps(){return FUT.d?FUT.d.comps.filter(c=>c.events.some(e=>e.markets.some(m=>fShow(c,m)))):[]}
 const FSPN={basketball:"Basketball",soccer:"Soccer",football:"American football"},FKIND=[["all","All markets"],["champion","Winners"],["award","Awards"],["leader","Leaders"],["finish","Finishing position"],["other","Other"]];
 const FSTN={open:"Open",suspended:"Suspended",closed:"Closed"};
 async function futLoad(force){if(FUT.busy||(!force&&FUT.d&&Date.now()-FUT.at<3e5))return;FUT.busy=1;
@@ -24,7 +29,7 @@ const fNz=s=>(" "+String(s||"").normalize("NFD").replace(/[̀-ͯ]/g,"").toLowerC
 var FTEAM=null;function fTeam(n){if(!FTEAM){FTEAM={};const add=x=>{if(x)FTEAM[fNz(x)]=x};Object.values(TM).forEach(t=>add(t.n));Object.keys(SOCTID).forEach(add);Object.values(TMD.soc||{}).forEach(t=>add(SAL0[t.n]||t.n))}
  const k=fNz(n);if(FTEAM[k])return FTEAM[k];const w=k.split(" ");const hit=Object.keys(FTEAM).filter(x=>w.every(p=>(" "+x+" ").includes(" "+p+" ")));return hit.length===1?FTEAM[hit[0]]:null}
 function fSelArt(c,s){const tm=fTeam(s.n);if(tm)return mLogo({n:tm},26);if(c.sport==="basketball"&&NBAP[s.n])return avatar(s.n,null,"nba",26);return`<span class="fsi">${esc(String(s.n).split(" ").map(w=>w[0]).join("").slice(0,3).toUpperCase())}</span>`}
-function fFind(mk){if(!FUT.d)return null;for(const c of FUT.d.comps)for(const e of c.events)for(const m of e.markets)if(m.id===mk)return{c,e,m};return null}
+function fFind(mk){if(!FUT.d)return null;for(const c of FUT.d.comps)for(const e of c.events)for(const m of e.markets)if(m.id===mk&&fShow(c,m))return{c,e,m};return null}
 const fEnds=e=>{const t=Date.parse(e.ends);return isNaN(t)?"":new Date(t).toLocaleDateString("en-AU",{month:"long",year:"numeric"})};
 function fStatus(m){return`<span class="fst2 ${m.st}">${FSTN[m.st]||m.st}</span>`}
 /* the page */
@@ -32,14 +37,14 @@ function specPage(){if(!FUT.d)return`<div class="card fhd"><h2 class="dsti">Spec
  const D=FUT.d,upd=`Prices: ${esc(D.src)} · updated ${fmt(Date.parse(D.fetched))}${Date.now()-Date.parse(D.fetched)>2*36e5?' · <b class="lost">may be out of date</b>':""}`;
  const head=`<div class="card fhd"><h2 class="dsti">Special Bets</h2><div class="tm">Futures are bets on what's decided over a whole season or tournament: who wins the league, the cup or the championship. They stay open until the result is official, often for months, and have no cash-out.</div><div class="tm note" style="margin:6px 0 0">${upd}</div></div>`;
  if(FV.mk){const F=fFind(FV.mk);if(F)return head+fMarketView(F);FV.mk=""}
- const sps=[...new Set(D.comps.map(c=>c.sport))],q=FV.q.trim().toLowerCase();
- const comps=D.comps.filter(c=>(FV.sp==="all"||c.sport===FV.sp)&&(!FV.comp||c.id===FV.comp));
+ const CS=fComps(),sps=[...new Set(CS.map(c=>c.sport))],q=FV.q.trim().toLowerCase();
+ const comps=CS.filter(c=>(FV.sp==="all"||c.sport===FV.sp)&&(!FV.comp||c.id===FV.comp)),kinds=new Set(CS.flatMap(c=>c.events.flatMap(e=>e.markets.filter(m=>fShow(c,m)).map(m=>m.k))));
  const chip=(k,v,l)=>`<button data-fv="${k}:${v}" class="${String(FV[k])===String(v)?"on":""}">${l}</button>`;
  const filt=`<div class="card fflt"><div class="gbf">${chip("sp","all","All sports")}${sps.map(s=>chip("sp",s,FSPN[s]||s)).join("")}</div>
-  <div class="gbf">${FKIND.map(([k,l])=>chip("kind",k,l)).join("")}</div>
-  <div class="ffrow"><select class="scsel" data-fvc="1" aria-label="Competition"><option value="">All competitions</option>${D.comps.filter(c=>FV.sp==="all"||c.sport===FV.sp).map(c=>`<option value="${c.id}"${FV.comp===c.id?" selected":""}>${esc(c.n)}</option>`).join("")}</select>
+  <div class="gbf">${FKIND.filter(([k])=>k==="all"||kinds.has(k)).map(([k,l])=>chip("kind",k,l)).join("")}</div>
+  <div class="ffrow"><select class="scsel" data-fvc="1" aria-label="Competition"><option value="">All competitions</option>${CS.filter(c=>FV.sp==="all"||c.sport===FV.sp).map(c=>`<option value="${c.id}"${FV.comp===c.id?" selected":""}>${esc(c.n)}</option>`).join("")}</select>
   <input class="fq" data-fq="1" placeholder="Search a team, player or market" value="${esc(FV.q)}" aria-label="Search futures"></div></div>`;
- let body="";comps.forEach(c=>{const mks=[];c.events.forEach(e=>e.markets.forEach(m=>{if(FV.kind!=="all"&&m.k!==FV.kind)return;if(q&&!(c.n+" "+m.n).toLowerCase().includes(q)&&!m.sel.some(s=>s.n.toLowerCase().includes(q)))return;mks.push({e,m})}));if(!mks.length)return;
+ let body="";comps.forEach(c=>{const mks=[];c.events.forEach(e=>e.markets.forEach(m=>{if(!fShow(c,m)||FV.kind!=="all"&&m.k!==FV.kind)return;if(q&&!(c.n+" "+m.n).toLowerCase().includes(q)&&!m.sel.some(s=>s.n.toLowerCase().includes(q)))return;mks.push({e,m})}));if(!mks.length)return;
   const lead=mks.find(x=>x.m.k==="champion"&&x.m.st!=="closed")||mks[0],top=lead.m.sel.filter(s=>!q||s.n.toLowerCase().includes(q)||(c.n+" "+lead.m.n).toLowerCase().includes(q)).slice(0,3);
   body+=`<div class="card fcmp"><div class="fch">${LEAGUE_LOGO[c.id]?`<img src="${LEAGUE_LOGO[c.id]}" alt="" width="22" height="22">`:""}<b>${esc(c.n)}</b><small class="tm">${FSPN[c.sport]||""} · ${mks.length} market${mks.length===1?"":"s"}</small></div>
    <button class="flead" data-fmk="${lead.m.id}"><span><b>${esc(lead.m.n)}</b>${fStatus(lead.m)}<small class="tm">Decided by ${fEnds(lead.e)}</small></span><span class="ftop">${top.map(s=>`<span>${fSelArt(c,s)}<em>${esc(s.n)}</em><b>${f2(s.p)}</b></span>`).join("")}</span><span class="more">All ${lead.m.sel.length} ›</span></button>
