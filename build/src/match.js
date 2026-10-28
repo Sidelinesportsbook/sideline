@@ -9,6 +9,8 @@ const evOf=g=>g&&(EVM[g.eid]||(ALIAS[g.id]&&EVM[ALIAS[g.id].g.slice(1)])||(Strin
 const mPath=m=>m.path||ESP[m.sp];
 function parseMatch(m,j){const comp=(((j.header||{}).competitions)||[])[0]||{},cs=comp.competitors||[],SID={};cs.forEach(c=>{SID[String(c.id||(c.team||{}).id)]=c.homeAway==="home"?"h":"a"});
  const side=id=>SID[String(id)]||"a",o={id:m.id,sp:m.sp,at:Date.now(),fin:!!(((comp.status||{}).type||{}).completed),lines:{h:[],a:[]},teams:{h:[],a:[]},players:{},pbp:[],events:[],rosters:{},info:{}};
+ /* the official score and clock in this same reply, to check the play-by-play against */
+ o.sc={};o.det=((comp.status||{}).type||{}).shortDetail||"";cs.forEach(c=>{if(c.score!=null)o.sc[c.homeAway==="home"?"h":"a"]=NV(c.score)});
  cs.forEach(c=>{const s=c.homeAway==="home"?"h":"a";o.lines[s]=(c.linescores||[]).map(x=>x.displayValue!=null?x.displayValue:x.value);const t=c.team||{};
   const cur=m[s]||(m[s]={});if(!cur.logo)cur.logo=(t.logos&&t.logos[0]&&t.logos[0].href)||t.logo||"";if(!cur.id)cur.id=String(t.id||c.id||"");if(!cur.ab)cur.ab=t.abbreviation||"";if(c.score!=null)cur.sc=NV(c.score)});
  ((j.boxscore||{}).teams||[]).forEach(t=>{o.teams[side((t.team||{}).id)]=(t.statistics||[]).map(s=>[s.label||s.abbreviation||s.name,s.displayValue!=null?s.displayValue:s.value,s.name])});
@@ -17,8 +19,12 @@ function parseMatch(m,j){const comp=(((j.header||{}).competitions)||[])[0]||{},c
   /* every play keeps ESPN's own id, so a refresh replaces plays (corrections included) instead of adding duplicates. The order is ESPN's
      own (chronological): a play ESPN adds or corrects later gets a higher sequence number but sits in its real place in the list */
   o.pbp=(j.plays||[]).map(p=>{const c=p.coordinate||{},ty=(p.type||{}).text||"",tx=p.text||"",v=+p.pointsAttempted||(p.shootingPlay?(/^Free Throw/.test(ty)?1:/three point/.test(tx)?3:2):0),ok=p.shootingPlay&&v>1&&c.x>=-2&&c.x<=52&&c.y>=-2&&c.y<=94,a0=p.participants&&p.participants[0]&&p.participants[0].athlete,d=(tx.match(/(\d+)-foot/)||[])[1];
-   return{id:p.id,s:+p.sequenceNumber||0,q:(p.period||{}).number,c:(p.clock||{}).displayValue||"",t:tx,ty,sc:!!p.scoringPlay,v,shp:!!p.shootingPlay,pid:a0?String(a0.id):"",x:ok?c.x:null,y:ok?c.y:null,d:d==null?null:+d,h:p.homeScore,a:p.awayScore,tm:p.team?side(p.team.id):""}});
-  const seen=new Set();o.pbp=o.pbp.filter(p=>!p.id||!seen.has(p.id)&&seen.add(p.id))}
+   return{id:p.id,s:+p.sequenceNumber||0,q:(p.period||{}).number,c:(p.clock||{}).displayValue||"",t:tx,ty,sc:!!p.scoringPlay,sv:+p.scoreValue||0,v,shp:!!p.shootingPlay,pid:a0?String(a0.id):"",x:ok?c.x:null,y:ok?c.y:null,d:d==null?null:+d,h:p.homeScore,a:p.awayScore,tm:p.team?side(p.team.id):""}});
+  const seen=new Set();o.pbp=o.pbp.filter(p=>!p.id||!seen.has(p.id)&&seen.add(p.id));
+  /* the running score added up from the scoring plays themselves. ESPN's own running score is often a play early or late,
+     or carries a basket that was taken off (about a third of games); the scoring plays always add up to the official score,
+     so where they do, that total is what's shown beside each play (mPbp2 checks, and says so when ESPN's figures differed) */
+  let H=0,A=0,df=0;o.pbp.forEach(p=>{if(p.sc&&p.tm){if(p.tm==="h")H+=p.sv;else A+=p.sv}p.ch=H;p.ca=A;if(p.h!=null&&(+p.h!==H||+p.a!==A))df++});o.psum={h:H,a:A,df}}
  else{o.events=(j.keyEvents||[]).map(e=>({min:(e.clock||{}).displayValue||"",type:(e.type||{}).text||"",t:e.text||e.shortText||"",tm:e.team?side(e.team.id):"",sc:!!e.scoringPlay})).filter(e=>e.type&&!/^(Kickoff|Start|End|Halftime)/i.test(e.type)||e.sc);
   /* the full match feed (shots, fouls, corners, offsides, cards, subs, goals) with each shot's position, matched to a side by team name */
   const NM={};cs.forEach(c=>{const t=c.team||{},s=c.homeAway==="home"?"h":"a";[t.displayName,t.shortDisplayName,t.name].forEach(x=>{if(x)NM[x]=s})});const seen=new Set();
@@ -48,9 +54,10 @@ function renderMatch(g,m){const mc=MC[m.id],err=MCERR[m.id],bs=mBets(m,g),soc=m.
  const tabs=[["ov","Overview"],["box",soc?"Player stats":"Box score"],["team","Team stats"],[soc?"tl":"pbp",soc?"Timeline":"Play-by-play"],soc?["map","Shot map"]:["shots","Shot chart"],...(soc?[["line","Lineups"]]:[]),["bets",`Your bets${bs.length?" ("+bs.length+")":""}`]];
  if(!tabs.some(t=>t[0]===MTAB))MTAB="ov";
  const order=soc?["h","a"]:["a","h"],fin=finalOf(m)||[m.h.sc,m.a.sc],e=endAt(m),live=m.state==="in",lv=LIVE[g.id];
- if(live&&lv&&g.id==="e"+m.id){m.h.sc=lv.h;m.a.sc=lv.a}
+ /* the score at the top: whichever is newer, the live scoreboard or this page's own box score fetch (they can differ by a play) */
+ const fresh=mc&&mc.sc&&mc.sc.h!=null&&mc.at>((typeof POLL!=="undefined"&&POLL.at)||0);if(live&&fresh){m.h.sc=mc.sc.h;m.a.sc=mc.sc.a}else if(live&&lv&&g.id==="e"+m.id){m.h.sc=lv.h;m.a.sc=lv.a}
  if(live&&mc&&!MCERR["l"+m.id])liveRefresh(g,m);
- const hero=`<div class="card mh"><div class="mhs">${order.map(k=>{const s=m[k],w=k==="h"?m.h.sc>m.a.sc:m.a.sc>m.h.sc;return`<div class="mht${w?" w":""}"><button class="tnm" data-team="${esc(tName(s))}">${mLogo(s,44)}</button><button class="tnm mhn" data-team="${esc(tName(s))}">${esc(tName(s))}</button><b>${s.sc}</b></div>`}).join(`<div class="mhm">${live?`<span class="lvb"><i></i>LIVE</span><b class="mhq">${esc(liveQ(lv||m))}</b>`:`<span>${esc(m.det||"Final")}</span>`}<small>${esc(LGN[m.sp]||(mc&&mc.info.league)||"")}</small></div>`)}</div>
+ const hero=`<div class="card mh"><div class="mhs">${order.map(k=>{const s=m[k],w=k==="h"?m.h.sc>m.a.sc:m.a.sc>m.h.sc;return`<div class="mht${w?" w":""}"><button class="tnm" data-team="${esc(tName(s))}">${mLogo(s,44)}</button><button class="tnm mhn" data-team="${esc(tName(s))}">${esc(tName(s))}</button><b>${s.sc}</b></div>`}).join(`<div class="mhm">${live?`<span class="lvb"><i></i>LIVE</span><b class="mhq">${esc(fresh&&mc.det?liveQ({q:mc.det}):liveQ(lv||m))}</b>`:`<span>${esc(m.det||"Final")}</span>`}<small>${esc(LGN[m.sp]||(mc&&mc.info.league)||"")}</small></div>`)}</div>
   <div class="mhi"><span>${fmt(m.ts)}</span>${live?`<span>${mc?"Box score updated "+new Date(mc.at).toLocaleTimeString([],{hour:"numeric",minute:"2-digit",second:"2-digit"}):"Loading live box score…"}${MCF[m.id]?" · ESPN slow to respond, retrying":""}</span>`:""}${!live&&e.ok?`<span>Finished ${new Date(e.t).toLocaleTimeString([],{hour:"numeric",minute:"2-digit"})}</span>`:""}${mc&&mc.info.venue?`<span>${esc(mc.info.venue)}</span>`:""}${isAET(m)&&m.reg?`<span>90 min: ${m.reg[0]} – ${m.reg[1]}</span>`:""}</div></div>`;
  const back=MFROM==="past"?`<button class="back" data-pback="1">‹ Back to Past games</button>`:`<button class="back" data-back="1">‹ Back</button>`;
  let body;
@@ -99,7 +106,7 @@ let PBQ=0;
 function mPbp(m,mc){if(!mc.pbp||!mc.pbp.length)return`<div class="cempty">${mc.fin&&!mc.pbp?"Play-by-play loads from ESPN; reconnect to view it.":"Play-by-play not published for this game."}</div>`;
  const qs=[...new Set(mc.pbp.map(p=>p.q))].filter(Boolean),q=PBQ&&qs.includes(PBQ)?PBQ:qs[qs.length-1],rows=mc.pbp.filter(p=>p.q===q).slice().reverse();
  return`<div class="gbf">${qs.map(x=>`<button data-pbq="${x}" class="${x===q?"on":""}">${x<=4?"Q"+x:"OT"+(x-4)}</button>`).join("")}<button data-pbq="-1" class="${PBQ===-1?"on":""}">Scoring only</button></div>
- <div class="card mpbp">${(PBQ===-1?mc.pbp.filter(p=>p.sc).slice().reverse():rows).map(p=>`<div class="mpr${p.sc?" sc":""}"><span class="mmin">${PBQ===-1?(p.q<=4?"Q"+p.q:"OT")+" ":""}${esc(p.c)}</span>${p.tm?mLogo(m[p.tm],16):"<span></span>"}<span>${esc(p.t)}</span><b>${p.a??""}–${p.h??""}</b></div>`).join("")}</div>`}
+ <div class="card mpbp">${(PBQ===-1?mc.pbp.filter(p=>p.sc).slice().reverse():rows).map(p=>`<div class="mpr${p.sc?" spl":""}"><span class="mmin">${PBQ===-1?(p.q<=4?"Q"+p.q:"OT")+" ":""}${esc(p.c)}</span>${p.tm?mLogo(m[p.tm],16):"<span></span>"}<span>${esc(p.t)}</span><b>${p.a??""}–${p.h??""}</b></div>`).join("")}</div>`}
 function mLineups(m,mc){return`<div class="mlu">${["h","a"].map(k=>{const r=mc.rosters[k];if(!r)return`<div class="cempty">Lineup not published.</div>`;const st=r.rows.filter(p=>p.st),sb=r.rows.filter(p=>!p.st);
  return`<div class="card"><div class="pn">${mLogo(m[k],20)} <b>${esc(tName(m[k]))}</b><small class="tm" style="margin-left:auto">${r.form?"Formation "+esc(r.form):"Formation not published"}</small></div><h2>Starting XI</h2>${st.map(p=>`<div class="kv"><span class="bxp"><small class="tm">${esc(p.j)}</small>${avatar(p.n,p.id,"soc",24)}${plink(p.n,p.id)}</span><small class="tm">${esc(p.pos)}${p.off?" · off":""}</small></div>`).join("")||'<div class="tm">Not published</div>'}
  <h2>Substitutes</h2>${sb.map(p=>`<div class="kv"><span class="bxp"><small class="tm">${esc(p.j)}</small>${avatar(p.n,p.id,"soc",24)}${plink(p.n,p.id)}</span><small class="tm">${esc(p.pos)}${p.on?" · came on":" · unused"}</small></div>`).join("")||'<div class="tm">Not published</div>'}</div>`}).join("")}</div>`}

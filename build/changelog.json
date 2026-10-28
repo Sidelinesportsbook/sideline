@@ -1,4 +1,5 @@
 [
+ {"d":"2026-10-28","t":"Fixed: play-by-play scores. ESPN's running score is often a play early or late, or keeps a basket that was taken off (about a third of games). The score beside each play is now added up from the scoring plays, which always match the official score, and the score at the top uses the freshest figures. Scoring plays no longer look like boxed cards."},
  {"d":"2026-10-28","t":"The Leaderboard is now live: it updates the moment anyone places, settles or cashes out a bet, using the same checks against official results. The server still re-checks every bet every 30 minutes."},
  {"d":"2026-10-28","t":"Leaderboard: the Void column is now Cash outs, so you can see how often each player cashed out."},
  {"d":"2026-10-28","t":"New look: match pages and profiles carry each team's own colours, game cards on bigger screens show Head to head, Line and Total side by side, numbers line up in every table, and pages show the shape of what's loading instead of a spinner."},
