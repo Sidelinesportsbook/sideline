@@ -35,7 +35,7 @@ function fStatus(m){return`<span class="fst2 ${m.st}">${FSTN[m.st]||m.st}</span>
 /* the page */
 function specPage(){if(!FUT.d)return`<div class="card fhd"><h2 class="dsti">Special Bets</h2><div class="tm">${FUT.err?esc(FUT.err):"Loading futures prices…"}</div></div>${FUT.err?"":skel(120,120,120)}`;
  const D=FUT.d,upd=`Prices: ${esc(D.src)} · updated ${fmt(Date.parse(D.fetched))}${Date.now()-Date.parse(D.fetched)>2*36e5?' · <b class="lost">may be out of date</b>':""}`;
- const head=`<div class="card fhd"><h2 class="dsti">Special Bets</h2><div class="tm">Futures are bets on what's decided over a whole season or tournament: who wins the league, the cup or the championship. They stay open until the result is official, often for months, and have no cash-out.</div><div class="tm note" style="margin:6px 0 0">${upd}</div></div>`;
+ const head=`<div class="card fhd"><h2 class="dsti">Special Bets</h2><div class="tm">Season-long bets on who wins the league, cup or title. They settle when the result is official and can't be cashed out.</div><div class="tm note" style="margin:6px 0 0">${upd}</div></div>`;
  if(FV.mk){const F=fFind(FV.mk);if(F)return head+fMarketView(F);FV.mk=""}
  const CS=fComps(),sps=[...new Set(CS.map(c=>c.sport))],q=FV.q.trim().toLowerCase();
  const comps=CS.filter(c=>(FV.sp==="all"||c.sport===FV.sp)&&(!FV.comp||c.id===FV.comp)),kinds=new Set(CS.flatMap(c=>c.events.flatMap(e=>e.markets.filter(m=>fShow(c,m)).map(m=>m.k))));

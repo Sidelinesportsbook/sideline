@@ -173,7 +173,7 @@ input,select,textarea{border-radius:10px}input:focus,textarea:focus{box-shadow:0
 .acct{margin-top:12px;padding:10px 12px;border-radius:10px;border:1px solid color-mix(in srgb,var(--ov) 40%,var(--line));background:color-mix(in srgb,var(--ov) 10%,transparent);text-align:left}.acct small{display:block;color:var(--mut);margin-top:2px}.glink{color:var(--acc);font-weight:600}
 .tnm{background:none;border:0;padding:0;font:inherit;color:inherit;cursor:pointer;text-align:left}.tnm:hover{text-decoration:underline;text-decoration-color:var(--acc);text-underline-offset:3px}
 .tbig{background:none;border:0;padding:6px;border-radius:12px;font:inherit;color:inherit;cursor:pointer}.tbig:hover{background:var(--raise)}
-.sbk{display:block;margin:-6px 0 8px}.frm{display:flex;gap:6px;flex-wrap:wrap}.fc{width:28px;height:28px;display:grid;place-items:center;border-radius:8px;font:700 14px var(--fd)}.fc.fw{background:var(--ov);color:#fff}.fc.fl{background:var(--un);color:#fff}.fc.fd{background:var(--raise);color:var(--mut);border:1px solid var(--line)}
+.sbk{display:block;margin:-6px 0 8px}.frm{display:flex;gap:6px;flex-wrap:wrap}.fc{width:28px;height:28px;display:grid;place-items:center;border-radius:8px;font:700 14px var(--fd)}.fc.fw{background:var(--ov);color:#fff}.fc.fl{background:var(--un);color:#fff;animation:none}.fc.fd{background:var(--raise);color:var(--mut);border:1px solid var(--line)}
 .tb tr.me td{background:color-mix(in srgb,var(--acc) 14%,transparent);font-weight:700}#pso .sg{margin-bottom:6px}
 .c-won{background:var(--ov)!important;color:#fff!important}.c-lost{background:var(--un)!important;color:#fff!important}
 .lm.lw{color:var(--ov)!important;font-weight:900;font-size:16px}.lm.ll{color:var(--un)!important;font-weight:900;font-size:16px}
@@ -438,13 +438,13 @@ header{background:color-mix(in srgb,var(--card) 82%,transparent)!important;-webk
 .scleg{display:flex;gap:6px 14px;flex-wrap:wrap;align-items:center;font-size:11.5px;color:var(--mut);margin:8px 2px 2px}.scleg span{display:inline-flex;align-items:center;gap:5px}
 .scleg i{display:inline-block;width:12px;height:12px;border-radius:3px;font-style:normal}.scleg .lm{border-radius:50%;background:var(--ov);width:10px;height:10px}.scleg .lx{width:auto;height:auto;color:var(--un);font-weight:800;font-size:12px}
 .scleg .lz.zn2,.scleg .lz.zn1,.scleg .lz.zn0,.scleg .lz.zm1,.scleg .lz.zm2{border:1px solid var(--line)}.scleg .hgr i{width:70px;background:linear-gradient(90deg,color-mix(in srgb,var(--acc) 14%,transparent),var(--acc))}
-.scleg .lb{background:color-mix(in srgb,var(--acc) 60%,transparent)}.scleg .ll{height:2px;width:16px;background:var(--tx);border-radius:1px}.scleg .ld{height:2px;width:16px;background:repeating-linear-gradient(90deg,var(--tx) 0 5px,transparent 5px 8px);border-radius:0}
+.scleg .lb{background:color-mix(in srgb,var(--acc) 60%,transparent)}.scleg .ll{height:2px;width:16px;background:var(--tx);border-radius:1px}.scleg .ld{padding:0;border-bottom:0;height:2px;width:16px;background:repeating-linear-gradient(90deg,var(--tx) 0 5px,transparent 5px 8px);border-radius:0}
 .scleg .lna{border:1px dashed var(--mut)}.scleg .lo{border-radius:50%;border:2px solid var(--mut);width:10px;height:10px}.scleg .lt{width:0;height:0;border-left:6px solid transparent;border-right:6px solid transparent;border-bottom:10px solid var(--mut);border-radius:0}
 .scleg .lm.n{background:var(--acc)}.scleg .lx.n{color:var(--acc)}.scleg .lh{background:var(--th,var(--acc));border-radius:50%;width:10px;height:10px}.scleg .la{background:var(--ta,var(--tB));border-radius:50%;width:10px;height:10px}
 .gbsp{flex:none;width:1px;align-self:stretch;margin:3px 6px;background:var(--line)}
 .scsel{background:var(--btn);border:1px solid var(--line);border-radius:7px;color:var(--tx);padding:3px 6px;font-size:12px;font-weight:600;max-width:170px;flex:none}
 /* chart bars stay neutral: a red or green club colour would read as a loss or a win */
-.gbr.tr{fill:color-mix(in srgb,var(--acc) 60%,transparent)}.gbb.on .gbr.tr{fill:var(--acc)}.trl{fill:none;stroke:var(--tx);stroke-width:2;stroke-linejoin:round;pointer-events:none}.trd{fill:var(--tx);stroke:var(--panel);stroke-width:1.5;pointer-events:none}
+.gbr.tr{fill:color-mix(in srgb,var(--acc) 60%,transparent)}.gbr.tr.h{fill:var(--ov)}.gbr.tr.m{fill:var(--un)}.gbr.tr.d{fill:var(--mut)}.gbb.on .gbr.tr{filter:brightness(1.15)}.trl{fill:none;stroke:var(--tx);stroke-width:2;stroke-linejoin:round;pointer-events:none}.trd{fill:var(--tx);stroke:var(--panel);stroke-width:1.5;pointer-events:none}
 .ztb td:first-child{white-space:nowrap}.qsp{padding:6px 14px}.qr{display:grid;grid-template-columns:minmax(84px,140px) 1fr 44px 56px;gap:10px;align-items:center;padding:7px 0;border-top:1px solid var(--line);font-size:12.5px}.qr:first-child{border-top:0}
 .qr b{font:700 15px var(--fd);text-align:right}.qr small{color:var(--mut);text-align:right}.qb{height:8px;border-radius:4px;background:var(--raise);overflow:hidden}.qb i{display:block;height:100%;background:var(--acc);border-radius:4px;transition:width .3s var(--ease)}
 .qr.gq{grid-template-columns:minmax(84px,140px) 1fr 30px 30px}.qb2{display:grid;gap:3px}.qb.gf i{background:var(--ov)}.qb.ga i{background:var(--un)}.qr.gq b{font-size:14px}
@@ -494,7 +494,7 @@ h2.dsti{margin:0 0 2px;font:700 22px/1.1 var(--fd);letter-spacing:.3px;text-tran
 .npx{padding:12px 14px;border:1px dashed var(--line);border-radius:10px;color:var(--mut);font-size:13px;line-height:1.45;margin-top:6px}.npx b{color:var(--tx)}
 /* NBA shot chart: shooting by distance, and the hottest / coldest zones */
 .dstc{margin-top:12px}.dsh{display:flex;flex-direction:column;gap:2px;margin-bottom:6px}.dsh b{font:700 15px var(--fd);letter-spacing:.3px}.dsh small{font-size:12px}
-.dstc .gbv{fill:var(--tx);font-weight:700}.dsa{fill:color-mix(in srgb,var(--mut) 30%,transparent)}.dsm{fill:var(--acc)}.scleg .lz.dsa{background:color-mix(in srgb,var(--mut) 30%,transparent)}.scleg .lz.dsm{background:var(--acc)}
+.dstc .gbv{fill:var(--tx);font-weight:700}.dsa{fill:color-mix(in srgb,var(--un) 42%,transparent)}.dsm{fill:var(--ov)}.scleg .lz.dsa{background:color-mix(in srgb,var(--un) 42%,transparent)}.scleg .lz.dsm{background:var(--ov)}
 .dzhc{display:flex;flex-wrap:wrap;gap:4px 14px;align-items:center;font-size:13px;margin:8px 0 2px}.dzhc span{display:inline-flex;align-items:center;gap:6px}.dzhc .lz{width:12px;height:12px;border-radius:3px;display:inline-block}.dzhc small{font-size:11.5px}
 /* NBA zone chart: each zone filled by FG% on the red-yellow-green scale (style attribute), over the hardwood */
 .dz{fill-opacity:.86;stroke:rgba(255,255,255,.55);stroke-width:1;transition:fill-opacity .12s}.dz.dzsm{stroke:#fff;stroke-width:1.8;stroke-dasharray:5 4}
