@@ -8,7 +8,7 @@
 param([int]$Days = 0)
 $ErrorActionPreference = 'Stop'
 $EB = 'https://site.api.espn.com/apis/site/v2/sports/'
-$LG = [ordered]@{ nba = 'basketball/nba'; epl = 'soccer/eng.1'; ucl = 'soccer/uefa.champions' }
+$LG = [ordered]@{ nba = 'basketball/nba'; epl = 'soccer/eng.1'; ucl = 'soccer/uefa.champions'; fac = 'soccer/eng.fa'; lgc = 'soccer/eng.league_cup'; uel = 'soccer/uefa.europa' }
 function Get-Json($u) { for ($i = 0; $i -lt 3; $i++) { try { return Invoke-RestMethod -TimeoutSec 20 $u } catch { Start-Sleep -Seconds (2 * ($i + 1)) } }; $null }
 function Num($x) { $n = 0.0; if ([double]::TryParse([string]$x, [ref]$n)) { $n } else { 0 } }
 function Side($cp) { [ordered]@{ n = $cp.team.displayName; ab = $cp.team.abbreviation; logo = [string]$cp.team.logo; sc = Num $cp.score; id = [string]$cp.team.id } }

@@ -4,15 +4,17 @@
 # (each player's matches, with minutes worked out from ESPN's substitution times, and every shot with its pitch position)
 # and data\pa\st<team id>.json (each match's team statistics for both sides, goals by minute and every shot for and against).
 $ErrorActionPreference = 'Stop'
-$START = [datetime]'2026-08-01'; $EB = 'https://site.api.espn.com/apis/site/v2/sports/soccer/'; $COMPS = 'eng.1', 'uefa.champions'
+$START = [datetime]'2026-08-01'; $EB = 'https://site.api.espn.com/apis/site/v2/sports/soccer/'; $COMPS = 'eng.1', 'uefa.champions', 'eng.fa', 'eng.league_cup', 'uefa.europa'
 $cacheF = Join-Path $PSScriptRoot 'data\soc-cache.json'; $paD = Join-Path $PSScriptRoot 'data\pa'; New-Item -ItemType Directory -Force $paD | Out-Null
 function Num($x) { $n = 0.0; if ([double]::TryParse([string]$x, [ref]$n)) { $n } else { 0 } }
 function Fetch([string[]]$urls) {
-  $pool = [runspacefactory]::CreateRunspacePool(1, 10); $pool.Open()
-  $jobs = foreach ($u in ($urls | Select-Object -Unique)) { $ps = [powershell]::Create(); $ps.RunspacePool = $pool
+  # in batches of 200, so a few thousand requests (the first xG run) never run out of threads
+  $all = @($urls | Select-Object -Unique); if ($all.Count -gt 200) { $res = @{}; for ($i = 0; $i -lt $all.Count; $i += 200) { $part = Fetch $all[$i..([math]::Min($i + 199, $all.Count - 1))]; foreach ($k in $part.Keys) { $res[$k] = $part[$k] } }; return $res }
+  $pool = [runspacefactory]::CreateRunspacePool(1, $(if ($env:SL_THREADS) { [int]$env:SL_THREADS } else { 10 })); $pool.Open()
+  $jobs = foreach ($u in $all) { $ps = [powershell]::Create(); $ps.RunspacePool = $pool
     [void]$ps.AddScript({ param($u) for ($i = 0; $i -lt 3; $i++) { try { return (Invoke-WebRequest -UseBasicParsing -TimeoutSec 25 $u).Content } catch { Start-Sleep -Milliseconds (500 * ($i + 1)) } }; $null }).AddArgument($u)
     [pscustomobject]@{ u = $u; ps = $ps; h = $ps.BeginInvoke() } }
-  $r = @{}; foreach ($j in $jobs) { $o = $j.ps.EndInvoke($j.h); $r[$j.u] = if ($o.Count) { $o[0] } else { $null }; $j.ps.Dispose() }; $pool.Close(); $r
+  $r = @{}; foreach ($j in $jobs) { $o = $j.ps.EndInvoke($j.h); $r[$j.u] = if ($o.Count) { $o[0] } else { $null }; $j.ps.Dispose() }; $pool.Close(); $pool.Dispose(); $r
 }
 # "45'+2'" -> 47; "90'+4'" -> 94 (minutes played); shot and goal times keep the half: "45+2"
 function Mins($s) { $m = [regex]::Matches([string]$s, '\d+'); if (-not $m.Count) { return $null }; $v = 0; foreach ($x in $m) { $v += [int]$x.Value }; $v }
@@ -58,20 +60,49 @@ foreach ($id in @($need.Keys)) { $u, $comp = $need[$id] -split '\|'; if (-not $s
   $added++ }
 $cj = [ordered]@{}; foreach ($k in ($cache.Keys | Sort-Object)) { $cj[$k] = $cache[$k] }
 [IO.File]::WriteAllText("$cacheF.tmp", ($cj | ConvertTo-Json -Depth 6 -Compress), [Text.UTF8Encoding]::new($false)); Move-Item -Force "$cacheF.tmp" $cacheF
+# ---------- expected goals and the finer stats, from ESPN's detailed match statistics ----------
+# per team: xG, xG on target, xA, non-penalty xG, big chances created, touches in the opposition box; per player: official
+# minutes, xG, xA, xG on target, passes, accurate passes, shot assists (chances created), tackles won, touches; per shot: its
+# xG and xG on target (matched to the match feed's shot by its exact pitch position, the same ESPN source). Cached by match in
+# data\soc-xg-cache.json and read again whenever the match itself is.
+$xgF = Join-Path $PSScriptRoot 'data\soc-xg-cache.json'; $XG = @{}; if (Test-Path $xgF) { ([IO.File]::ReadAllText($xgF) | ConvertFrom-Json).PSObject.Properties | % { $XG[$_.Name] = $_.Value } }
+$CB = 'https://sports.core.api.espn.com/v2/sports/soccer/leagues/'
+$TX = 'expectedGoals', 'expectedGoalsOnTarget', 'expectedAssists', 'expectedGoalsNonPenalty', 'bigChanceCreated', 'touchesInOppBox'
+$PX = 'minutes', 'expectedGoals', 'expectedAssists', 'expectedGoalsOnTarget', 'totalPasses', 'accuratePasses', 'shotAssists', 'effectiveTackles', 'touches'
+function StatMap($raw) { $m = @{}; if (-not $raw) { return $m }; $j = $raw | ConvertFrom-Json; foreach ($c in @($j.splits.categories)) { foreach ($s in @($c.stats)) { $m[[string]$s.name] = $s.value } }; $m }
+function Pick($m, $keys) { ($keys | % { if ($m.ContainsKey($_) -and $null -ne $m[$_]) { [math]::Round([double]$m[$_], 3) } else { '' } }) -join '|' }
+$todo = @($cache.Keys | ? { $x = $XG[$_]; -not $x -or [string]$x.at -ne [string]$cache[$_].at })
+$u1 = @{}; foreach ($id in $todo) { $m = $cache[$id]; $base = "$CB$($m.c)/events/$id/competitions/$id"; $u1["$id|h"] = "$base/competitors/$($m.h.id)/statistics"; $u1["$id|a"] = "$base/competitors/$($m.a.id)/statistics"; $u1["$id|p1"] = "$base/plays?limit=1000&page=1" }
+$r1 = if ($u1.Count) { Fetch @($u1.Values) } else { @{} }
+$u2 = @{}; foreach ($id in $todo) { $raw = $r1[$u1["$id|p1"]]; if (-not $raw) { continue }; $pc = [int](($raw | ConvertFrom-Json).pageCount); for ($pp = 2; $pp -le $pc; $pp++) { $u2["$id|p$pp"] = $u1["$id|p1"] -replace 'page=1$', "page=$pp" } }
+$r2 = if ($u2.Count) { Fetch @($u2.Values) } else { @{} }
+$u3 = @{}; foreach ($id in $todo) { $m = $cache[$id]; $base = "$CB$($m.c)/events/$id/competitions/$id"; foreach ($x in @($m.pl)) { if (-not $x) { continue }; $f = $x -split '\|'; $tid = if ($f[1] -eq 'h') { $m.h.id } else { $m.a.id }; $u3["$id|$($f[0])"] = "$base/competitors/$tid/roster/$($f[0])/statistics/0" } }
+$r3 = if ($u3.Count) { Fetch @($u3.Values) } else { @{} }
+$xgN = 0; foreach ($id in $todo) { $m = $cache[$id]; $th = $r1[$u1["$id|h"]]; $ta = $r1[$u1["$id|a"]]; if (-not $th -or -not $ta) { continue }
+  $sx = [ordered]@{}; $pages = @($r1[$u1["$id|p1"]]) + @($u2.Keys | ? { $_ -like "$id|p*" } | % { $r2[$u2[$_]] })
+  foreach ($pg in $pages) { if (-not $pg) { continue }; foreach ($p in @(($pg | ConvertFrom-Json).items)) { if ($null -eq $p.expectedGoals -or $null -eq $p.fieldPositionX) { continue }
+    $sx["$([math]::Round([double]$p.fieldPositionX, 1))|$([math]::Round([double]$p.fieldPositionY, 1))"] = "$([math]::Round([double]$p.expectedGoals, 3))|$(if ($null -ne $p.expectedGoalsOnTarget) { [math]::Round([double]$p.expectedGoalsOnTarget, 3) })" } }
+  $plx = [ordered]@{}; foreach ($k in @($u3.Keys | ? { $_ -like "$id|*" })) { $raw = $r3[$u3[$k]]; if ($raw) { $plx[$k.Split('|')[1]] = Pick (StatMap $raw) $PX } }
+  $XG[$id] = [ordered]@{ at = [string]$m.at; h = (Pick (StatMap $th) $TX); a = (Pick (StatMap $ta) $TX); sh = $sx; pl = $plx }; $xgN++ }
+$xj = [ordered]@{}; foreach ($k in ($XG.Keys | Sort-Object)) { $xj[$k] = $XG[$k] }
+[IO.File]::WriteAllText("$xgF.tmp", ($xj | ConvertTo-Json -Depth 5 -Compress), [Text.UTF8Encoding]::new($false)); Move-Item -Force "$xgF.tmp" $xgF
+$XS = { param($id, $f3, $f4) $x = $XG[$id]; if (-not $x -or -not $x.sh) { return '|' }; $v = $x.sh."$f3|$f4"; if ($v) { [string]$v } else { '|' } }
+$XP = { param($id, $aid) $x = $XG[$id]; $v = if ($x -and $x.pl) { $x.pl."$aid" }; if ($v) { [string]$v } else { '||||||||' } }
+$XT = { param($id, $s) $x = $XG[$id]; if ($x -and $x.$s) { @(([string]$x.$s) -split '\|') } else { @() } }
 # per player and per team
 $P = @{}; $PS = @{}; $TG = @{}; $TSH = @{}; $stamp = $now.ToString('yyyy-MM-ddTHH:mm:ssZ')
 foreach ($id in $cache.Keys) { $m = $cache[$id]
   foreach ($s in 'h', 'a') { $o = if ($s -eq 'h') { 'a' } else { 'h' }; $me = $m.$s; $op = $m.$o; $res = "$(if ($me.sc -gt $op.sc) { 'W' } elseif ($me.sc -lt $op.sc) { 'L' } else { 'D' }) $($me.sc)-$($op.sc)"
     if (-not $TG.ContainsKey($me.id)) { $TG[$me.id] = [Collections.Generic.List[object]]::new(); $TSH[$me.id] = [Collections.Generic.List[string]]::new() }
     $kick = if ($ISO[$id]) { $ISO[$id] } else { [string]$m.d }
-    $TG[$me.id].Add([ordered]@{ e = $id; d = $m.d; iso = $kick; c = $m.c; o = $op.ab; on = $op.n; oid = $op.id; ha = $(if ($s -eq 'h') { 'vs' } else { '@' }); gf = $me.sc; ga = $op.sc; ht = @($me.ht, $op.ht); s = @($m.ts.$s); os = @($m.ts.$o)
+    $TG[$me.id].Add([ordered]@{ e = $id; d = $m.d; iso = $kick; c = $m.c; o = $op.ab; on = $op.n; oid = $op.id; ha = $(if ($s -eq 'h') { 'vs' } else { '@' }); gf = $me.sc; ga = $op.sc; ht = @($me.ht, $op.ht); s = @($m.ts.$s); os = @($m.ts.$o); x = [string[]]@(& $XT $id $s); ox = [string[]]@(& $XT $id $o)
       gl = [string[]]@(@($m.gl) | ? { $_ } | % { $f = $_ -split '\|'; "$($f[0])|$(if ($f[1] -eq $s) { 1 } else { 0 })|$($f[2])|$($f[3])" }) })
-    foreach ($x in @($m.sh)) { if (-not $x) { continue }; $f = $x -split '\|'; $TSH[$me.id].Add((@($id, $(if ($f[0] -eq $s) { 1 } else { 0 })) + $f[1..7]) -join '|') }
+    foreach ($x in @($m.sh)) { if (-not $x) { continue }; $f = $x -split '\|'; $TSH[$me.id].Add((@($id, $(if ($f[0] -eq $s) { 1 } else { 0 })) + $f[1..7] + @(& $XS $id $f[3] $f[4])) -join '|') }
     foreach ($x in @($m.pl)) { if (-not $x) { continue }; $f = $x -split '\|'; if ($f[1] -ne $s) { continue }; if (-not $P.ContainsKey($f[0])) { $P[$f[0]] = [Collections.Generic.List[string]]::new() }
-      $P[$f[0]].Add((@($id, $m.d, $m.c, $op.ab, $op.n, $(if ($s -eq 'h') { 'vs' } else { '@' }), $res) + $f[2..17] + @($kick)) -join '|') } }
-  foreach ($x in @($m.sh)) { if (-not $x) { continue }; $f = $x -split '\|'; if (-not $f[1]) { continue }; if (-not $PS.ContainsKey($f[1])) { $PS[$f[1]] = [Collections.Generic.List[string]]::new() }; $PS[$f[1]].Add((@($id) + $f[2..7]) -join '|') } }
+      $P[$f[0]].Add((@($id, $m.d, $m.c, $op.ab, $op.n, $(if ($s -eq 'h') { 'vs' } else { '@' }), $res) + $f[2..17] + @($kick) + @(& $XP $id $f[0])) -join '|') } }
+  foreach ($x in @($m.sh)) { if (-not $x) { continue }; $f = $x -split '\|'; if (-not $f[1]) { continue }; if (-not $PS.ContainsKey($f[1])) { $PS[$f[1]] = [Collections.Generic.List[string]]::new() }; $PS[$f[1]].Add((@($id) + $f[2..7] + @(& $XS $id $f[3] $f[4])) -join '|') } }
 $wf = { param($n, $o) [IO.File]::WriteAllText((Join-Path $paD "$n.json"), ($o | ConvertTo-Json -Depth 5 -Compress), [Text.UTF8Encoding]::new($false)) }
 foreach ($k in $P.Keys) { $rows = [string[]]@($P[$k] | Sort-Object { ($_ -split '\|')[23] } -Descending); $sh = [string[]]@(); if ($PS.ContainsKey($k)) { $sh = [string[]]$PS[$k].ToArray() }
   & $wf "s$k" ([ordered]@{ v = 1; id = $k; at = $stamp; rows = $rows; sh = $sh }) }
 foreach ($k in $TG.Keys) { & $wf "st$k" ([ordered]@{ v = 1; id = $k; at = $stamp; cols = $TSK; g = [object[]]@($TG[$k] | Sort-Object { $_.iso } -Descending); sh = [string[]]$TSH[$k].ToArray() }) }
-"SOC_SEASON matches=$($cache.Count) new=$added players=$($P.Count) teams=$($TG.Count)"
+"SOC_SEASON matches=$($cache.Count) new=$added xg-new=$xgN players=$($P.Count) teams=$($TG.Count)"

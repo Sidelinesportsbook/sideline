@@ -7,11 +7,11 @@ $EB = 'https://site.api.espn.com/apis/site/v2/sports/basketball/nba/'
 $dataF = Join-Path $PSScriptRoot 'data\sideline-data.json'; $cacheF = Join-Path $PSScriptRoot 'data\nba-box-cache.json'
 function Num($x) { $n = 0.0; if ([double]::TryParse([string]$x, [ref]$n)) { $n } else { 0 } }
 function Fetch([string[]]$urls) {
-  $pool = [runspacefactory]::CreateRunspacePool(1, 10); $pool.Open()
+  $pool = [runspacefactory]::CreateRunspacePool(1, $(if ($env:SL_THREADS) { [int]$env:SL_THREADS } else { 10 })); $pool.Open()
   $jobs = foreach ($u in ($urls | Select-Object -Unique)) { $ps = [powershell]::Create(); $ps.RunspacePool = $pool
     [void]$ps.AddScript({ param($u) for ($i = 0; $i -lt 3; $i++) { try { return (Invoke-WebRequest -UseBasicParsing -TimeoutSec 25 $u).Content } catch { Start-Sleep -Milliseconds (500 * ($i + 1)) } }; $null }).AddArgument($u)
     [pscustomobject]@{ u = $u; ps = $ps; h = $ps.BeginInvoke() } }
-  $r = @{}; foreach ($j in $jobs) { $o = $j.ps.EndInvoke($j.h); $r[$j.u] = if ($o.Count) { $o[0] } else { $null }; $j.ps.Dispose() }; $pool.Close(); $r
+  $r = @{}; foreach ($j in $jobs) { $o = $j.ps.EndInvoke($j.h); $r[$j.u] = if ($o.Count) { $o[0] } else { $null }; $j.ps.Dispose() }; $pool.Close(); $pool.Dispose(); $r
 }
 $cache = @{}
 # rows carry shooting splits and the event id (19 fields); older cached games are fetched once more to add them

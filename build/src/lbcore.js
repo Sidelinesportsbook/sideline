@@ -21,11 +21,15 @@ const LBC=(()=>{
     "w" / "l", "v" (postponed, or the player did not play), "" (no final result yet).
     During a game (A.lv = the live box score) a player "over" that has already been passed is won, as the app settles it:
     the figure can only go up. Nothing else is decided before the final. */
- function legResult(l,A){if(A.ppd&&A.ppd[l.g])return"v";const r=A.res&&A.res[l.g];
+ function legResult(l,A){if(l.m==="fut"){const f=futRes(l,A);return f?(f.win.map(String).includes(String(l.s))?"w":"l"):""}   /* a futures bet: the official result for its market (futures-settle.ps1) */
+  if(A.ppd&&A.ppd[l.g])return"v";const r=A.res&&A.res[l.g];
   if(!r){const lv=A.lv&&A.lv[l.g];if(lv&&l.m==="p"&&(l.s==="o"||l.s==="k")){const x=stat(lv[l.pl],l.st);if(x!==undefined&&!isNaN(x)&&(l.s==="k"?x>=l.line:x>l.line))return"w"}return""}
   if(l.m==="p"){const box=A.rp&&A.rp[l.g];if(!box||!Object.keys(box).length)return"";const x=stat(box[l.pl],l.st);if(x===undefined||isNaN(x))return"v";return(l.s==="k"?x>=l.line:l.s==="o"?x>l.line:x<l.line)?"w":"l"}
   return legWin(l,r[0],r[1])?"w":"l"}
  function betResult(rs,ins){const lost=rs.filter(r=>r==="l").length;if(lost>=2||(lost===1&&!ins))return"l";if(rs.some(r=>!r))return"";if(lost===1)return"r";if(rs.every(r=>r==="v"))return"v";return"w"}
+ /* futures legs are "fut:<sport>:<PointsBet market id>"; their result, and when it was decided, come from A.fut */
+ const futRes=(l,A)=>A.fut&&A.fut[String(l.g).split(":")[2]]||null;
+ const futEv=(l,A)=>{const f=futRes(l,A);return f?{sp:String(l.g).split(":")[1],iso:f.ends,end:f.at}:null};
  const wonOdds=(legs,bx)=>r2(legs.reduce((q,l)=>l.r==="w"?q*l.odds:q,1)*(bx||1)),allOdds=(legs,bx)=>r2(legs.reduce((q,l)=>q*l.odds,1)*(bx||1));
  /* a bet as recorded in an account -> its record. spOf(gameId) gives the sport, endOf(legs) the latest game end */
  function fromBet(b,spOf,endOf){const x={won:"w",lost:"l",cash:"c",ref:"r",void:"v"}[b.st]||"",sps=[...new Set(b.legs.map(l=>spOf(l.g)||"?"))];
@@ -61,15 +65,21 @@ const LBC=(()=>{
       - it was in the player's record before its games started, once the server had already been seeing that record
       - a cash-out is no more than the bet could have paid, and was taken before the server saw the bet decided
       - the stake was affordable: start balance + the most the daily spin can pay + returns so far
+      - a placed bet can't be taken back (the app never cancels one): once the server has seen a bet it keeps a copy, and the
+        bet keeps counting, and settles on the official result, even if it later disappears from the player's public record
+        (counted as "removed")
     A bet the results show differently from the player's own copy is counted as the official result says. */
  const TEST=/^(test|demo|qa|sltest|tmp|dummy)/i;
  const key=b=>b.t+"|"+b.legs.map(l=>[l.g,l.m,l.s,l.line,l.pl||"",l.st||""].join(":")).join(",");
  const core=b=>key(b)+"|"+b.stake+"|"+b.legs.map(l=>l.odds).join(",")+"|"+(b.ins?1:0)+"|"+(b.bx||1);
  const sane=b=>b&&num(b.t)&&num(b.stake)&&b.stake>0&&b.stake<=1e5&&Array.isArray(b.legs)&&b.legs.length>=1&&b.legs.length<=25&&(b.bx==null||(num(b.bx)&&b.bx>=1&&b.bx<=3))&&b.legs.every(l=>l&&typeof l.g==="string"&&typeof l.m==="string"&&num(l.odds)&&l.odds>=1.01&&l.odds<=1001);
  const endOfEv=e=>e.end?Date.parse(e.end):Date.parse(e.iso)+3*36e5;
- function verifyUser(doc,A,reg,now){const out={recs:[],recent:[],pend:0,unv:0,fix:0,bad:{invalid:0,dup:0,edited:0,late:0,cash:0,funds:0}},seen=reg.seen||(reg.seen={}),prev=reg.last||0,keys=new Set(),J=[];
-  const bets=(Array.isArray(doc.bets)?doc.bets:[]).filter(b=>{if(!sane(b)){out.bad.invalid++;return false}const k=key(b);if(keys.has(k)){out.bad.dup++;return false}keys.add(k);return true}).sort((a,b)=>a.t-b.t);
-  bets.forEach(b=>{const k=key(b),h=core(b),evs=b.legs.map(l=>A.ev[l.g]),known=evs.every(Boolean),start=known?Math.min(...evs.map(e=>Date.parse(e.iso))):null;let s=seen[k];
+ function verifyUser(doc,A,reg,now){const out={recs:[],recent:[],pend:0,unv:0,fix:0,bad:{invalid:0,dup:0,edited:0,late:0,cash:0,funds:0,removed:0}},seen=reg.seen||(reg.seen={}),prev=reg.last||0,keys=new Set(),J=[];
+  const bets=(Array.isArray(doc.bets)?doc.bets:[]).filter(b=>{if(!sane(b)){out.bad.invalid++;return false}const k=key(b);if(keys.has(k)){out.bad.dup++;return false}keys.add(k);return true});
+  /* bets the server has a copy of but the record no longer has: put back and counted */
+  for(const k in seen){const s=seen[k];if(s&&s.keep&&!keys.has(k)&&sane(s.keep)){keys.add(k);bets.push(s.keep);out.bad.removed++}}
+  bets.sort((a,b)=>a.t-b.t);
+  bets.forEach(b=>{const k=key(b),h=core(b),evs=b.legs.map(l=>l.m==="fut"?futEv(l,A):A.ev[l.g]),known=evs.every(Boolean),start=known?Math.min(...evs.map(e=>Date.parse(e.iso))):null;let s=seen[k];
    if(!s){s=seen[k]={h,f:doc.upd};if(prev&&start!==null&&prev>start+6e4)s.late=1}
    if(s.h!==h){out.bad.edited++;return}if(s.late||(known&&b.t>start+12e4)){out.bad.late++;return}
    /* a game the results don't know yet (not started, or not in the feed): the bet is pending, whatever the player's copy says,
@@ -89,6 +99,8 @@ const LBC=(()=>{
   const t0=J.length?J[0].b.t:0,evts=[];J.forEach((j,i)=>{evts.push([j.b.t,0,i]);if(j.x)evts.push([j.at,1,i])});evts.sort((a,b)=>a[0]-b[0]||a[1]-b[1]);
   let bank=0;const drop=new Set();evts.forEach(([t,kind,i])=>{const j=J[i];if(drop.has(i))return;if(kind){bank+=j.r;return}
    const allow=100+50*(Math.floor((t-t0)/864e5)+1);if(bank-j.b.stake+allow<-.01){drop.add(i);out.bad.funds++;return}bank-=j.b.stake});
+  /* every bet that counts is kept (only what's needed to check it again), so it can't be taken back later */
+  J.forEach((j,i)=>{if(!drop.has(i)){const s=seen[key(j.b)];if(s&&!s.keep){const b=j.b;s.keep={t:b.t,st:b.st,stake:b.stake,odds:b.odds,ins:b.ins?1:0,bx:b.bx||1,sat:b.sat||null,co:b.co?{amt:b.co.amt,t:b.co.t}:null,legs:b.legs.map(l=>({g:l.g,m:l.m,s:l.s,line:l.line,pl:l.pl||"",st:l.st||"",odds:l.odds,r:"",d:String(l.d||"").slice(0,90)}))}}}});
   J.forEach((j,i)=>{if(drop.has(i))return;const p=j.sp.length===1?j.sp[0]:"mix",vl=j.legs.filter(l=>l.r==="v").length;
    if(!j.x){out.pend++;out.recs.push({t:j.b.t,s:0,p,n:j.legs.length,k:j.b.stake,r:0,o:j.o||allOdds(j.b.legs,j.b.bx),x:"",v:vl});return}
    out.recs.push({t:j.b.t,s:j.at,p,n:j.legs.length,k:j.b.stake,r:j.r,o:j.o,x:j.x,v:vl})});

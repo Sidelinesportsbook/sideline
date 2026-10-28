@@ -2,13 +2,15 @@
 # Public JSON the pointsbet.com.au site reads; no login. Re-run to refresh:  powershell -ExecutionPolicy Bypass -File pb-data.ps1
 $ErrorActionPreference = 'Stop'
 $B = 'https://api.au.pointsbet.com/api'
-$COMP = [ordered]@{ nba = 7176; epl = 136535; ucl = 155246 }
+$COMP = [ordered]@{ nba = 7176; epl = 136535; ucl = 155246; lgc = 156281; uel = 130330 }   # lgc = EFL (Carabao) Cup, uel = Europa League
+# the FA Cup's match competition only appears on PointsBet once a round is priced: found by its exact name each run
+try { $sc = Invoke-RestMethod -TimeoutSec 30 "$B/v2/sports/soccer/competitions"; $fa = @($sc.locales | % { $_.competitions } | ? { $_.name -eq 'English FA Cup' })[0]; if ($fa) { $COMP['fac'] = [int]$fa.key } } catch { Write-Warning "PointsBet competition list unavailable: $_" }
 function Fetch([string[]]$urls) {
   $pool = [runspacefactory]::CreateRunspacePool(1, 8); $pool.Open()
   $jobs = foreach ($u in $urls) { $ps = [powershell]::Create(); $ps.RunspacePool = $pool
     [void]$ps.AddScript({ param($u) for ($i = 0; $i -lt 3; $i++) { try { return (Invoke-WebRequest -UseBasicParsing -TimeoutSec 60 $u).Content } catch { Start-Sleep -Milliseconds 700 } }; $null }).AddArgument($u)
     [pscustomobject]@{ u = $u; ps = $ps; h = $ps.BeginInvoke() } }
-  $r = @{}; foreach ($j in $jobs) { $o = $j.ps.EndInvoke($j.h); $r[$j.u] = if ($o.Count) { $o[0] } else { $null }; $j.ps.Dispose() }; $pool.Close(); $r
+  $r = @{}; foreach ($j in $jobs) { $o = $j.ps.EndInvoke($j.h); $r[$j.u] = if ($o.Count) { $o[0] } else { $null }; $j.ps.Dispose() }; $pool.Close(); $pool.Dispose(); $r
 }
 $fu = @{}; foreach ($k in $COMP.Keys) { $fu[$k] = "$B/v2/competitions/$($COMP[$k])/events/featured?includeLive=false" }
 $fr = Fetch $fu.Values

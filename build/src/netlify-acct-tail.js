@@ -9,7 +9,16 @@
  const ERR={"auth/email-already-in-use":"That username is taken. Choose Log in if it's yours.","auth/invalid-credential":"Incorrect username or password.","auth/wrong-password":"Incorrect username or password.","auth/user-not-found":"Incorrect username or password.","auth/invalid-login-credentials":"Incorrect username or password.","auth/too-many-requests":"Too many attempts. Wait a few minutes, then try again.","auth/weak-password":"Use a password with at least 6 characters.","auth/network-request-failed":"No connection. Check your internet and try again."};
  const msg=e=>ERR[e&&e.code]||"Something went wrong. Please try again.";
  let mode="login";claimName=async()=>"";
- showGate=function(){if(UID){$("#gate").innerHTML="";return}if(!booted)return;const c=mode==="create",pre=S.name||"";
+ /* the gate follows Firebase's answer about the session, never a timer:
+      still restoring the session, or signed in and the account still loading -> no login form (a short "Signing you in"
+      card only if this browser has nothing to show yet); signed in but the account couldn't load -> say so, with Try again;
+      Firebase says nobody is signed in -> the login form. (A 1.2 s / 2.5 s timer used to show the form whenever loading was
+      slower than that, so a still-valid session looked logged out.) */
+ const card=h=>`<div class="mod gate"><div class="mc"><div class="logo" style="justify-content:center">Sideline</div>${h}</div></div>`;
+ showGate=function(){if(UID){$("#gate").innerHTML="";return}const au=window.SL_AUTHU;
+  if(au===undefined||(au&&!window.__bootEnd)){$("#gate").innerHTML=S.name?"":card(`<div class="tm" style="margin-top:12px"><span class="spn" style="display:inline-block;vertical-align:-3px;margin-right:8px"></span>Signing you in…</div>`);return}
+  if(au&&window.__bootEnd){$("#gate").innerHTML=card(`<div class="tm gsub" style="margin-top:12px">You're signed in, but your account couldn't be loaded just now (no connection?). Your bets are safe.</div><button class="go" onclick="location.reload()">Try again</button>`);return}
+  const c=mode==="create",pre=S.name||"";
   $("#gate").innerHTML=`<div class="mod gate"><div class="mc"><div class="logo" style="justify-content:center">Sideline</div>
   <div class="atabs"><button data-cmode="login" class="${c?"":"on"}">Log in</button><button data-cmode="create" class="${c?"on":""}">Create account</button></div>
   <div class="tm gsub">${c?(pre?`Add a password to <b>${esc(dn(pre))}</b> to keep your bets and use your account on any device.`:"Pick a username and password. Log in with them on any phone or computer. Every player is ranked on the public leaderboard by username, with their checked results."):"Log in with your username and password, on any device."}</div>
@@ -44,4 +53,4 @@
  /* note local edits so a just-made change is never overwritten by an older copy arriving from the server */
  ["click","input","change"].forEach(ev=>document.addEventListener(ev,()=>{window.__slLastLocal=Date.now()},true));
  /* signed in but the app hasn't shown the gate: nothing to do; signed out: always show the gate (even with an old browser profile) */
- setTimeout(()=>{if(!UID&&booted)showGate()},1200)})();
+ window.SL_ONAUTH=()=>showGate();if(window.SL_AUTHU!==undefined)showGate()})();

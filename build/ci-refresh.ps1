@@ -8,6 +8,10 @@ New-Item -ItemType Directory -Force (Join-Path $R 'data') | Out-Null
 if ($Full) { Step 'ESPN build (rosters, squads, logs, fixtures, lines)' 'build-data.ps1' } else { Step 'Team data' 'team-data.ps1'; Step 'NBA season stats' 'nba-season.ps1' }
 Step 'Soccer season (Premier League, Champions League)' 'soc-season.ps1'
 Step 'PointsBet prices' 'pb-data.ps1'
+# Special Bets: PointsBet futures, then the official results for the markets the app takes bets on (checked against last season's results first)
+Step 'Futures prices' 'futures-data.ps1'
+if ($Full) { Write-Host '== Futures settlement tests'; & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $R 'futures-settle.ps1') -Test 1; if ($LASTEXITCODE) { throw 'Futures settlement tests failed; not publishing' } }
+Step 'Futures results' 'futures-settle.ps1'
 # the results archive the leaderboard checks bets against: caught up on the last 3 weeks the first time, then every run adds its finals
 if (-not (Test-Path "$R\data\results-archive.done")) { Write-Host '== Results archive (last 3 weeks)'; & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $R 'live-feed.ps1') -Days 21; if (-not $LASTEXITCODE) { [IO.File]::WriteAllText("$R\data\results-archive.done", (Get-Date).ToString('o')) } }
 Step 'Live feed snapshot' 'live-feed.ps1'
@@ -26,7 +30,7 @@ $site = Join-Path (Split-Path $R) '_site'; New-Item -ItemType Directory -Force $
 Copy-Item "$R\netlify\index.html", "$R\netlify\version.json" $site -Force
 Get-ChildItem (Split-Path $R) -File | ? { $_.Name -like 'google*.html' -or $_.Name -eq 'sitemap.xml' } | Copy-Item -Destination $site -Force
 # the live ranking on the page uses the same results archive and the server's memory of each bet (lb-reg.json)
-foreach ($x in 'results-archive.json', 'lb-reg.json') { if (Test-Path "$R\data\$x") { Copy-Item "$R\data\$x" $site -Force } }
+foreach ($x in 'results-archive.json', 'lb-reg.json', 'futures.json', 'futures-results.json') { if (Test-Path "$R\data\$x") { Copy-Item "$R\data\$x" $site -Force } }
 if (Test-Path "$R\data\leaderboard.json") { Copy-Item "$R\data\leaderboard.json" $site -Force } else { [IO.File]::WriteAllText("$site\leaderboard.json", ('{"at":"' + (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ') + '","v":1,"users":[]}')) }
 # player and team analytics files (full season logs, shot locations), loaded when a profile opens
 if (Test-Path "$R\data\pa") { New-Item -ItemType Directory -Force "$site\pa" | Out-Null; Copy-Item "$R\data\pa\*.json" "$site\pa" -Force }

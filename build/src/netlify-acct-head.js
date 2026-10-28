@@ -8,6 +8,11 @@
 window.SL_CLOUD=1;
 (()=>{const cfg=window.FIREBASE_CONFIG;if(!cfg||!window.firebase){window.SL_CLOUD=0;return}firebase.initializeApp(cfg);
  const auth=firebase.auth(),fs=firebase.firestore();window.SL_AUTH=auth;window.SL_FS=fs;
+ /* stay signed in on this device until Log out (Firebase's own persistent session, kept in this browser's storage and
+    refreshed in the background; the password is never stored). window.SL_AUTHU: undefined while Firebase is still restoring
+    the session, then the signed-in user or null. The login screen waits for that answer instead of a timer. */
+ auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(()=>{});
+ auth.onAuthStateChanged(u=>{const first=window.SL_AUTHU===undefined;window.SL_AUTHU=u||null;if(first&&typeof window.SL_ONAUTH==="function")window.SL_ONAUTH(u)});
  const ready=new Promise(r=>{const un=auth.onAuthStateChanged(u=>{un();r(u)})});
  const map=p=>{const m=/^data\/users\/[^/]+\/state$/.test(p);return m?fs.doc("users/"+auth.currentUser.uid):fs.doc(p)};
  const db={doc:p=>{const d=map(p);return{get:()=>d.get(),set:o=>d.set(o),onSnapshot:(a,b)=>d.onSnapshot(a,b||(()=>{}))}},collection:p=>fs.collection(p)};

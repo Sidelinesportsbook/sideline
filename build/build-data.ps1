@@ -12,8 +12,10 @@ $SY = 2027                # ESPN's year for 2026-27 (season ending year)
 $PREV = 2026              # 2025-26
 
 function Get-Many([string[]]$urls, [int]$tries = 3) {
-  $pool = [runspacefactory]::CreateRunspacePool(1, 14); $pool.Open()
-  $jobs = foreach ($u in ($urls | Select-Object -Unique)) {
+  # in batches of 100: a worker per URL all at once ran out of threads once the cup competitions were added
+  $all = @($urls | Select-Object -Unique); if ($all.Count -gt 100) { $res = @{}; for ($i = 0; $i -lt $all.Count; $i += 100) { $part = Get-Many $all[$i..([math]::Min($i + 99, $all.Count - 1))] $tries; foreach ($k in $part.Keys) { $res[$k] = $part[$k] } }; return $res }
+  $pool = [runspacefactory]::CreateRunspacePool(1, $(if ($env:SL_THREADS) { [int]$env:SL_THREADS } else { 8 })); $pool.Open()
+  $jobs = foreach ($u in $all) {
     $ps = [powershell]::Create(); $ps.RunspacePool = $pool
     [void]$ps.AddScript({ param($u, $tries)
       for ($i = 0; $i -lt $tries; $i++) {
@@ -24,7 +26,7 @@ function Get-Many([string[]]$urls, [int]$tries = 3) {
   }
   $res = @{}
   foreach ($j in $jobs) { $r = $j.ps.EndInvoke($j.h); $res[$j.u] = if ($r.Count) { $r[0] } else { $null }; $j.ps.Dispose() }
-  $pool.Close(); return $res
+  $pool.Close(); $pool.Dispose(); return $res   # disposed, or thousands of requests run the machine out of threads
 }
 function J($s) { if ($s) { $s | ConvertFrom-Json } else { $null } }
 function Num($x) { $n = 0.0; if ([double]::TryParse([string]$x, [ref]$n)) { [math]::Round($n, 2) } else { 0 } }
@@ -33,7 +35,8 @@ $EW = 'https://site.web.api.espn.com/apis/common/v3/sports/basketball/nba/'
 
 # ---------- schedule + DraftKings lines ----------
 $today = (Get-Date).ToUniversalTime().Date
-$LG = [ordered]@{ nba = 'basketball/nba'; nfl = 'football/nfl'; epl = 'soccer/eng.1'; ucl = 'soccer/uefa.champions' }
+$LG = [ordered]@{ nba = 'basketball/nba'; nfl = 'football/nfl'; epl = 'soccer/eng.1'; ucl = 'soccer/uefa.champions'; fac = 'soccer/eng.fa'; lgc = 'soccer/eng.league_cup'; uel = 'soccer/uefa.europa' }
+$SOCK = 'epl', 'ucl', 'fac', 'lgc', 'uel'   # the soccer competitions (FA Cup, Carabao Cup and Europa League added 28 Oct 2026)
 # the scoreboard takes one day per request (ranges return 400)
 # start a day early: ESPN dates US evening games by the US day, so a game in play can carry "yesterday's" date in UTC terms
 $sbUrls = @{}; foreach ($k in $LG.Keys) { $sbUrls[$k] = @(-1..$Days | % { "$EB$($LG[$k])/scoreboard?dates=$($today.AddDays($_).ToString('yyyyMMdd'))" }) }
@@ -68,7 +71,7 @@ foreach ($g in $games) {
   $s = J $pr[$pu[$g.id]]; if (-not $s) { continue }
   $hp = $s.predictor.homeTeam.gameProjection; $ap = $s.predictor.awayTeam.gameProjection
   if ($hp) { $g | Add-Member ph ([math]::Round((Num $hp) / 100, 3)) }
-  if ($ap -and $hp -and $g.sp -in 'epl', 'ucl') { $g | Add-Member pd ([math]::Round([math]::Max(0, 1 - (Num $hp) / 100 - (Num $ap) / 100), 3)) }
+  if ($ap -and $hp -and $g.sp -in $SOCK) { $g | Add-Member pd ([math]::Round([math]::Max(0, 1 - (Num $hp) / 100 - (Num $ap) / 100), 3)) }
 }
 
 # ---------- soccer squads + per-player season stats (domestic league roster) ----------
@@ -95,7 +98,7 @@ function Rt([double]$v, [double]$gp, [int]$d) { if ($gp -gt 0) { return [math]::
 
 $socTeams = [ordered]@{}   # team id -> @{ n = displayName as in the game; epl = plays in an epl game }
 foreach ($g in $games) {
-  if ($g.sp -notin 'epl', 'ucl') { continue }
+  if ($g.sp -notin $SOCK) { continue }
   foreach ($pair in @(@($g.hid, $g.h), @($g.aid, $g.a))) {
     $tid = [string]$pair[0]; if (-not $tid) { continue }
     if (-not $socTeams.Contains($tid)) { $socTeams[$tid] = @{ n = $pair[1]; epl = $false } }
@@ -107,7 +110,8 @@ $BIG5 = 'eng.1', 'esp.1', 'ita.1', 'ger.1', 'fra.1'
 $b5r = Get-Many @($BIG5 | % { "${EB}soccer/$_/teams" })
 foreach ($lg5 in $BIG5) { $tj5 = J $b5r["${EB}soccer/$lg5/teams"]; if (-not $tj5) { Write-Warning "no team list for $lg5"; continue }
   foreach ($tw in @($tj5.sports[0].leagues[0].teams)) { $tid = [string]$tw.team.id; if (-not $socTeams.Contains($tid)) { $socTeams[$tid] = @{ n = $tw.team.displayName; epl = ($lg5 -eq 'eng.1'); home = $lg5 } } else { $socTeams[$tid].home = $lg5 } } }
-$COMMON = 'esp.1', 'ger.1', 'ita.1', 'fra.1', 'por.1', 'ned.1', 'tur.1', 'bel.1', 'aut.1', 'nor.1', 'sco.1', 'gre.1', 'cze.1', 'svk.1', 'aze.1',
+# the English Football League and National League too: FA Cup and Carabao Cup ties include their clubs
+$COMMON = 'eng.2', 'eng.3', 'eng.4', 'eng.5', 'esp.1', 'ger.1', 'ita.1', 'fra.1', 'por.1', 'ned.1', 'tur.1', 'bel.1', 'aut.1', 'nor.1', 'sco.1', 'gre.1', 'cze.1', 'svk.1', 'aze.1',
   'den.1', 'sui.1', 'cro.1', 'srb.1', 'isr.1', 'kaz.1', 'swe.1', 'pol.1', 'ukr.1', 'bul.1', 'cyp.1', 'hun.1', 'rou.1'
 $tmRes = Get-Many (@($socTeams.Keys | % { "${EB}soccer/teams/$_" }))
 foreach ($tid in @($socTeams.Keys)) {
@@ -161,7 +165,10 @@ function SocLogs($g) {
   } } }
   return $rows
 }
-$socP = @($soc | ? { $_.gp -ge 1 -and $_.id })
+# game logs for the players the app shows: clubs with a fixture in the list, and every Premier League player
+# (the squads now include every European and EFL club in the cups, ~6,000 players; logging all of them took 45 minutes)
+$fixT = @{}; foreach ($g in $games) { if ($g.sp -in $SOCK) { $fixT[[string]$g.hid] = 1; $fixT[[string]$g.aid] = 1 } }
+$socP = @($soc | ? { $_.gp -ge 1 -and $_.id -and ($fixT.ContainsKey([string]$_.tid) -or $_.src -eq 'eng.1') })
 $socLogN = 0
 for ($i0 = 0; $i0 -lt $socP.Count; $i0 += 150) {
   $batch = $socP[$i0..([math]::Min($i0 + 149, $socP.Count - 1))]

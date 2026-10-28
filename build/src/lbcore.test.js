@@ -55,6 +55,11 @@ function runLbcoreTests(LBC){const out=[],ok=(name,cond,info)=>out.push({name,pa
  {const b=bet(T0+9*H,10,[leg("e1","h","h",2)],"won",{sat:T0+13*H}),r=LBC.fromBet(b,()=>"nba",()=>T0+13*H);ok("a won bet's record is stake x odds at its settlement time",r.x==="w"&&eq(r.r,20)&&r.s===T0+13*H,JSON.stringify(r))}
  /* 21. daily totals: net is returns - stakes of the day's settled bets, voids aside */
  {const recs=[{t:0,s:Date.now(),p:"nba",n:1,k:10,r:25,o:2.5,x:"w",v:0},{t:0,s:Date.now(),p:"nba",n:1,k:5,r:0,o:2,x:"l",v:0},{t:0,s:Date.now(),p:"nba",n:1,k:4,r:4,o:2,x:"v",v:1}],s=LBC.stats(recs);ok("a day's net is returns - stakes, voids aside",eq(s.net,10)&&eq(s.staked,15)&&s.v===1,JSON.stringify(s))}
+ /* 22. a bet removed from the public record after the server saw it keeps counting (settled and open alike) */
+ {const won=bet(T0+9*H,10,[leg("e2","h","h",3)],"lost"),open=bet(T0+19*H,10,[leg("e4","h","h",2)]),reg={};LBC.verifyUser(doc([won,open]),A,reg,now);
+  const v=LBC.verifyUser(doc([]),A,reg,now),s=LBC.stats(v.recs);ok("bets removed from the record still count",v.bad.removed===2&&s.l===1&&s.pending===1&&eq(s.net,-10),JSON.stringify({bad:v.bad,s}))}
+ /* 23. a kept bet that is still in the record isn't counted twice */
+ {const b=bet(T0+9*H,10,[leg("e1","h","h",2)],"won"),reg={};LBC.verifyUser(doc([b]),A,reg,now);const v=LBC.verifyUser(doc([b]),A,reg,now);ok("a kept bet still in the record counts once",v.recs.length===1&&v.bad.removed===0,JSON.stringify(v.bad))}
  return out}
 if(typeof module!=="undefined"&&module.exports){module.exports=runLbcoreTests;
  if(require.main===module){const LBC=require("./lbcore.js"),res=runLbcoreTests(LBC),bad=res.filter(r=>!r.pass);

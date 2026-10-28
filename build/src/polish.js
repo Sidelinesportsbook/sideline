@@ -16,7 +16,7 @@ const _renderPol=render;render=function(m){_renderPol(m);document.body.classList
    - a coloured status strip on every bet card */
 function teamRec(n,sp){if(sp==="nba"){const id=Object.keys(TM).find(k=>TM[k].n===n),t=id&&(TMD.nba||{})[id];return t&&t.w!=null?`${t.w}-${t.l}`:""}
  const t=Object.values(TMD.soc||{}).find(x=>x.n===n||SAL0[x.n]===n);return t&&t.w!=null?`${t.w}-${t.d}-${t.l}`:""}
-const LEAGUE_LOGO={nba:"https://a.espncdn.com/i/teamlogos/leagues/500/nba.png",epl:"https://a.espncdn.com/i/leaguelogos/soccer/500/23.png",ucl:"https://a.espncdn.com/i/leaguelogos/soccer/500/2.png"};
+const LEAGUE_LOGO={nba:"https://a.espncdn.com/i/teamlogos/leagues/500/nba.png",epl:"https://a.espncdn.com/i/leaguelogos/soccer/500/23.png",ucl:"https://a.espncdn.com/i/leaguelogos/soccer/500/2.png",fac:"https://a.espncdn.com/i/leaguelogos/soccer/500/40.png",lgc:"https://a.espncdn.com/i/leaguelogos/soccer/500/41.png",uel:"https://a.espncdn.com/i/leaguelogos/soccer/500/2310.png"};
 const teamCol=n=>{const t=TBY[n];return t?"#"+t.c:null};
 const _renderGamesPol2=renderGames;renderGames=function(){_renderGamesPol2();
  if(!view)document.querySelectorAll("#games .card .open .tr").forEach(tr=>{if(tr.querySelector(".trc"))return;const b=tr.querySelector("[data-team]"),g=GM[(tr.closest("[data-open]")||{}).dataset&&tr.closest("[data-open]").dataset.open];if(!b||!g)return;const r=teamRec(b.dataset.team,g.sp);if(r)b.insertAdjacentHTML("afterend",`<small class="trc">${r}</small>`)});
@@ -30,7 +30,13 @@ const _renderGamesPol2=renderGames;renderGames=function(){_renderGamesPol2();
    if(is[0]&&ch)is[0].style.background=ch;if(is[1]&&ca)is[1].style.background=ca;bar.classList.add("tcol")}}};
 function colDist(a,b){const p=h=>[1,3,5].map(i=>parseInt(h.slice(i,i+2),16)),x=p(a),y=p(b);return Math.sqrt(x.reduce((s,v,i)=>s+(v-y[i])**2,0))}
 const _renderTabsPol=renderTabs;renderTabs=function(){_renderTabsPol();document.querySelectorAll("#tabs [data-tab]").forEach(b=>{const u=LEAGUE_LOGO[b.dataset.tab];if(u&&!b.querySelector(".lgl"))b.insertAdjacentHTML("afterbegin",`<img class="lgl" src="${u}" alt="" width="18" height="18">`)})};
-const _betCardPol=betCard;betCard=function(b,i){return _betCardPol(b,i).replace('<div class="bc"',`<div class="bc bs-${b.st==="open"?(betState(b)||"open").toLowerCase():b.st}"`)};
+/* boosts and payback, marked the same everywhere a bet appears: orange = the bet used a boost (its odds include +10%),
+   purple = Miss-1 payback (a 3+ leg multi that refunds the stake if exactly one leg misses). Only bets that really used one
+   are marked; prices on their own are never boosted, so market lists carry no badge. */
+function BX_CHIPF(){return'<span class="chip bstc" title="Boosted: this multi used a boost, so its odds include an extra 10%">BOOST +10%</span>'}
+function PB_CHIPF(){return'<span class="chip pbkc" title="Payback (Miss 1): if exactly one leg of this 3+ leg multi misses, the stake is refunded">PAYBACK</span>'}   /* functions: a page drawn before this file runs can still use them */
+const offerChips=h=>h.replace('<span class="chip">MISS-1</span>',PB_CHIPF()).replace('<span class="chip">BOOST</span>',BX_CHIPF());
+const _betCardPol=betCard;betCard=function(b,i){return offerChips(_betCardPol(b,i)).replace('<div class="bc"',`<div class="bc bs-${b.st==="open"?(betState(b)||"open").toLowerCase():b.st}"`)};
 /* ---------- club colours for every team ----------
    NBA colours come with the team data; soccer clubs use ESPN's official colours (primary = home colour, then the second
    colour). A colour too dark to see on the dark background falls back to the second colour, then to neutral grey. */

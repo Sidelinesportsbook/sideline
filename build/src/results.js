@@ -4,7 +4,7 @@
    every few minutes) covers pages where direct requests are blocked. Completion times are ESPN's own play-by-play clock. */
 /* small diagnostics log (window.__slog) so status and cash-out problems can be traced if they recur */
 function slog(k,msg){try{const L=window.__slog||(window.__slog=[]);L.push([new Date().toISOString(),k,msg]);if(L.length>200)L.shift()}catch(e){}}
-const LGN={nba:"NBA",epl:"Premier League",ucl:"Champions League"},EVM={},ALIAS={},DUR={nba:2.6*36e5,epl:1.95*36e5,ucl:1.95*36e5};
+const LGN={nba:"NBA",epl:"Premier League",ucl:"Champions League",fac:"FA Cup",lgc:"Carabao Cup",uel:"Europa League"},EVM={},ALIAS={},DUR={nba:2.6*36e5,epl:1.95*36e5,ucl:1.95*36e5,fac:2.2*36e5,lgc:2.2*36e5,uel:1.95*36e5};   /* cup ties can go to extra time and penalties */
 let EVAT=0,PASTAT=0,PGF={sp:"",q:"",bo:""};
 const ymd=t=>new Date(t).toISOString().slice(0,10).replace(/-/g,"");
 const isAET=m=>/AET|PEN/.test(m.stn||"");

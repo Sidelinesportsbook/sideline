@@ -458,6 +458,12 @@ header{background:color-mix(in srgb,var(--card) 82%,transparent)!important;-webk
 #games .mh,#games .card:has(>.hero){position:relative;overflow:hidden}
 #games .mh::before,#games .card:has(>.hero)::before{content:"";position:absolute;left:0;right:0;top:0;height:3px;background:linear-gradient(90deg,var(--tl,transparent) 0 50%,var(--tr,transparent) 50% 100%)}
 .ps.tcs{border-top:3px solid var(--tc)}.ps.tcs .ptb button.on,.ps.tcs .tabs button.on{border-bottom-color:var(--tc)}
+/* offers: orange = boost, purple = payback (Miss 1); a bar on the slip's toggles, a chip on every bet that used one */
+:root{--bst:#ff8a3d;--pbk:#a98bfa}@media (prefers-color-scheme:light){:root:not([data-theme="dark"]){--bst:#c2560c;--pbk:#6d3fd8}}:root[data-theme="light"]{--bst:#c2560c;--pbk:#6d3fd8}
+.chip.bstc{background:color-mix(in srgb,var(--bst) 18%,transparent);color:var(--bst);border:1px solid color-mix(in srgb,var(--bst) 45%,transparent);font-weight:800}
+.chip.pbkc{background:color-mix(in srgb,var(--pbk) 18%,transparent);color:var(--pbk);border:1px solid color-mix(in srgb,var(--pbk) 45%,transparent);font-weight:800}
+.ft[data-bx]{border-left:4px solid var(--bst)}.ft[data-ins]{border-left:4px solid var(--pbk)}.ft[data-bx] b{color:var(--bst)}.ft[data-ins] b{color:var(--pbk)}
+.ft.on[data-bx]{background:color-mix(in srgb,var(--bst) 20%,var(--card));border-color:var(--bst);color:var(--tx)}.ft.on[data-ins]{background:color-mix(in srgb,var(--pbk) 20%,var(--card));border-color:var(--pbk);color:var(--tx)}.ft.on[data-bx] small,.ft.on[data-ins] small{color:var(--tx)}
 /* hardwood court (shot markers) and grass pitch */
 .ctc.hw .ctl{stroke:rgba(255,255,255,.92);stroke-width:1.6}.ctc.hw .ctl .ctb{stroke:#fff;stroke-width:2.6}.ctc.hw .ctl .ctr{stroke:#ff7a2f;stroke-width:2.2}
 .hwj{stroke:rgba(70,40,12,.22);stroke-width:.9}.hwp{opacity:.6}.hwl{opacity:.5}.hwsh{fill:rgba(8,8,12,.16)}
@@ -480,7 +486,25 @@ h2.dsti{margin:0 0 2px;font:700 22px/1.1 var(--fd);letter-spacing:.3px;text-tran
 .dscv{font-style:normal;color:var(--mut);transition:transform .2s var(--ease);text-align:center}.dsgm[open] .dscv{transform:rotate(90deg)}.dsgx{padding:0 0 8px;animation:fade .18s ease both}
 .dspf{display:flex;gap:10px;align-items:center;padding:7px 0;border-top:1px solid var(--line)}.dsbh+.dspf,.dsgx>.dspf:first-child{border-top:0}.dspn{min-width:0;display:block;font-size:13px}.dspn small{display:block;color:var(--mut);font-size:12px;margin-top:1px}.dspn small b{color:var(--tx)}
 .dsb{display:inline-block;font-size:9.5px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;padding:1px 6px;border-radius:5px;background:var(--line);color:var(--tx);margin-left:4px;vertical-align:1px}.dsb.hi{background:color-mix(in srgb,var(--ov) 26%,transparent)}.dsb.lv{background:color-mix(in srgb,var(--un) 26%,transparent)}
-.dsmore,.dslink{background:none;border:0;color:var(--acc);font-weight:700;font-size:12px;padding:6px 0 0;cursor:pointer}.dsmore{display:block}.dsem{color:var(--mut);font-size:13px;padding:8px 0}.dslg{object-fit:contain;flex:none}
+.dsmore,.dslink{background:none;border:0;color:var(--acc);font-weight:700;font-size:12px;padding:6px 0 0;cursor:pointer}/* a selected price keeps its colours under the pointer (the hover background would leave dark text on a dark button) */
+.o.on:hover:not(:disabled){background:var(--acc);filter:brightness(1.06)}
+/* Special Bets */
+.fhd .tm{line-height:1.45}.fflt .gbf{margin-bottom:8px}.ffrow{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.ffrow .scsel{max-width:none;padding:8px;font-size:13px}
+.fq{flex:1;min-width:160px;background:var(--btn);border:1px solid var(--line);border-radius:8px;color:var(--tx);padding:8px 10px;font-size:14px;width:100%}
+.fch{display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap}.fch b{font:700 16px var(--fd);letter-spacing:.3px}.fch img{object-fit:contain}
+.flead{display:flex;flex-direction:column;gap:10px;width:100%;text-align:left;background:var(--btn);border:1px solid var(--line);border-radius:10px;padding:12px;color:var(--tx);transition:border-color .12s}.flead:hover{border-color:var(--acc)}
+.flead>span:first-child{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.flead>span:first-child b{font-size:15px}
+.ftop{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.ftop>span{display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px 4px;background:var(--panel);border-radius:8px;text-align:center;min-width:0}
+.ftop em{font-style:normal;font-size:12px;color:var(--mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}.ftop b{font:700 17px var(--fd);color:var(--odd,var(--tx));font-variant-numeric:tabular-nums}
+.flead .more{align-self:flex-end;color:var(--acc);font-size:13px;font-weight:700}
+.fmks{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}.fmks button{background:none;border:1px solid var(--line);border-radius:999px;padding:6px 11px;color:var(--tx);font-size:13px;font-weight:600}.fmks button:hover{border-color:var(--acc);color:var(--acc)}.fmks button.off{color:var(--mut)}
+.fsi{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:50%;background:var(--panel);color:var(--mut);font-size:10px;font-weight:700;flex:none}
+.fsels{display:flex;flex-direction:column;margin-top:10px}.fsel{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 0;border-bottom:1px solid var(--line)}.fsel:last-child{border-bottom:0}
+.fsn{display:flex;align-items:center;gap:8px;min-width:0}.fsn b{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.fsel .o{flex:none;min-width:76px;justify-content:center}.fpx{color:var(--mut);font-variant-numeric:tabular-nums;min-width:76px;text-align:center}
+.fsel.fwin .fsn b{color:var(--g)}.fnote{margin-top:10px;padding:9px 11px;border-radius:8px;background:var(--panel);font-size:13px;line-height:1.45;color:var(--mut)}.fnote.won{color:var(--g)}
+.fbet{padding:10px;margin:2px 0 8px;background:var(--panel);border-radius:10px;display:flex;flex-direction:column;gap:8px}.fbet label{display:flex;align-items:center;gap:8px;font-weight:600}.fbet input{width:110px;background:var(--btn);border:1px solid var(--line);border-radius:7px;color:var(--tx);padding:8px;font-size:15px}.fbet .go{margin-top:0}
+@media(max-width:520px){.ftop em{font-size:11px}.ftop b{font-size:15px}.flead{padding:10px}}
+.dsmore{display:block}.dsem{color:var(--mut);font-size:13px;padding:8px 0}.dslg{object-fit:contain;flex:none}
 .dsnet{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}.dsnet b{font:700 28px/1.1 var(--fd);font-variant-numeric:tabular-nums}.dsnet small{color:var(--mut);font-size:12px}
 .dsrec{display:flex;gap:12px;flex-wrap:wrap;font-weight:700;font-size:13px;margin:4px 0}.dskv{display:flex;gap:16px;flex-wrap:wrap;font-size:12px;color:var(--mut)}.dskv b{color:var(--tx)}
 .dsopen{font-size:12px;color:var(--mut);margin-top:8px;padding-top:8px;border-top:1px dashed var(--line)}.dsopen b{color:var(--tx)}

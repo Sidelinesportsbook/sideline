@@ -36,7 +36,7 @@ function liveProb(l,g,lv){const f=liveFrac(g,lv);if(f==null)return null;const h=
  const T0=g.t||2.6,pa=Math.max(.05,1-g.p-(g.pd||0)),sh=Math.min(.8,Math.max(.2,.5+(g.p-pa)*.6)),lh=T0*sh*f,la=T0*(1-sh)*f;let p=0;
  for(let i=0;i<=10;i++){const pi=poisLE(i,lh)-poisLE(i-1,lh);for(let j=0;j<=10;j++){const pj=poisLE(j,la)-poisLE(j-1,la);if(legWin(l,h+i,a+j))p+=pi*pj}}return clampP(p)}
 const liveAge=()=>Date.now()-Math.max(POLL&&POLL.state==="ok"?POLL.at:0,FEEDAT||0);
-function legProb(l){const g=GM[l.g];if(!g)return{ok:0,why:"Game details not available yet"};
+function legProb(l){if(l.m==="fut")return{ok:0,why:"Futures bets have no cash-out"};const g=GM[l.g];if(!g)return{ok:0,why:"Game details not available yet"};
  if(RES[l.g])return{ok:0,why:"Game finished · settling on the final result"};
  const lv=LIVE[l.g];
  if(!lv){if(lock(g))return{ok:0,why:"Game has started"};if(l.m==="p"&&INJ[l.pl]==="out")return{ok:0,why:"Suspended: player ruled out"};const c=legNow(l);return c?{ok:1,p:Math.min(.995,1/c/CO_OVR)}:{ok:0,why:"Suspended: no current price for a leg"}}

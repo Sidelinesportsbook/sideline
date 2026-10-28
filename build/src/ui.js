@@ -3,7 +3,7 @@ G.forEach(g=>{if(g.eid)EVID[g.id]=g.eid});
 /* baked finals + box scores settle bets even where live fetches are blocked */
 (DATA.res||[]).forEach(r=>{const h=SAL0[r.h]||r.h,a=SAL0[r.a]||r.a,t=Date.parse(r.iso);let g=G.find(x=>x.sp[0]===String(r.sp)[0]&&Math.abs(x.ts-t)<20*36e5&&(x.eid===r.id||(teq(x.h,h)&&teq(x.a,a))));
  /* a finished game that has dropped off the fixture list stays known (unlisted), so bets on it settle against its real result */
- if(!g){const sp=["nba","nfl","epl","ucl"].find(s=>s[0]===String(r.sp)[0]&&(s!=="nfl"||String(r.sp)==="nfl"))||String(r.sp);g={id:"e"+r.id,eid:r.id,sp,h,a,iso:r.iso,ts:t,leg:true,p:.5,pd:0};G.push(g);GM[g.id]=g}
+ if(!g){const sp=SP[r.sp]?String(r.sp):["nba","nfl","epl","ucl"].find(s=>s[0]===String(r.sp)[0]&&(s!=="nfl"||String(r.sp)==="nfl"))||String(r.sp);   /* an exact competition code first: "uel" must never become "ucl" */g={id:"e"+r.id,eid:r.id,sp,h,a,iso:r.iso,ts:t,leg:true,p:.5,pd:0};G.push(g);GM[g.id]=g}
  if(LR[g.id])return;
  if(r.pp){PPD[g.id]=1;return}LR[g.id]=[r.sc[0],r.sc[1]];const bx={};
  Object.entries(r.box||{}).forEach(([n,v])=>{const s=String(v).split("|").map(Number),k=PN[pkey(n)]||n;bx[k]=r.sp==="nba"?{pts:s[0],reb:s[1],ast:s[2],stl:s[3],blk:s[4],tpm:s[5],min:s[6]}:{g:s[0],sa:s[1],ss:s[2],sot:s[3],ft:s[4],fw:s[5],yc:s[6]}});
@@ -36,14 +36,16 @@ const srcNote=(src,ssn)=>`<div class="tm note">Season ${ssn||SEASON.current} · 
 function syncLine(){return`Stats updated ${synced()}${isStale()?' · <b class="lost">stale</b>':""}${FEEDAT?` · Scores ${fmt(FEEDAT)}${Date.now()-FEEDAT>6*36e5?' <b class="lost">(may be out of date)</b>':""}`:""}${PBD.fetched?` · PointsBet prices ${fmt(Date.parse(PBD.fetched))}`:""}`}
 function untilTomorrow(){const n=new Date(),m=new Date(n.getFullYear(),n.getMonth(),n.getDate()+1)-n,h=Math.floor(m/36e5),mi=Math.ceil(m%36e5/6e4);return h?`${h}h ${mi}m`:`${mi}m`}
 function legD(l){const n=l&&l.m==="p"&&l.pl;if(!n||!(NBAP[n]||SOCP[n])||!String(l.d).includes(n))return l.d;return String(l.d).replace(n,`<button class="pnm" data-ply="${esc(n)}">${esc(n)}</button>`)}
-function plSearch(q){const ts=teamSearch(q);if(!q||q.length<3)return ts;const hit=n=>n.toLowerCase().includes(q),ucl=new Set(G.filter(g=>g.sp==="ucl"&&!g.leg).flatMap(g=>[g.h,g.a])),inSp=p=>cur==="epl"?p.src==="eng.1":cur==="ucl"?ucl.has(SAL0[p.tm]||p.tm):false,
+function plSearch(q){const ts=teamSearch(q);if(!q||q.length<3)return ts;const hit=n=>n.toLowerCase().includes(q),inc=new Set(G.filter(g=>g.sp===cur&&!g.leg).flatMap(g=>[g.h,g.a])),inSp=p=>cur==="epl"?p.src==="eng.1":SP[cur]&&SP[cur].m==="soc"?inc.has(SAL0[p.tm]||p.tm):false,   /* a cup or European competition: players of the clubs in its fixtures */
  nb=cur==="nba"?Object.values(NBAP).filter(p=>hit(p.n)||hit(TM[p.t].n)).slice(0,12):[],sc=cur==="nba"?[]:Object.values(SOCP).filter(p=>inSp(p)&&(hit(p.n)||hit(p.tm))).sort((a,b)=>b.gp-a.gp).slice(0,12);
  if(!nb.length&&!sc.length)return ts;const row=(n,sub,stat)=>`<button class="rr" data-ply="${esc(n)}"><span class="rj"></span><span class="rn"><b>${esc(n)}</b><small>${sub}</small></span><span class="ra">${stat}</span></button>`;
  return ts+`<div class="card"><h2 style="margin-top:0">Players</h2>${nb.map(p=>{const a=p.c27;return row(p.n,`NBA · ${esc(TM[p.t].n)}`,a?`${f1(a.pts)}<small> pts</small>`:"<small>No games this season</small>")}).join("")}${sc.map(p=>row(p.n,`${esc(compN(p.src))} · ${esc(SAL0[p.tm]||p.tm)} · ${POS4[p.pos]||""}`,`${p.gp}<small> apps</small>${p.g!=null?Math.round(p.g*p.gp):"–"}<small> G</small>`)).join("")}</div>`}
 const synced=()=>fmt(Date.parse(DATA.synced));
 const abTeam=ab=>(Object.values(TM).find(x=>x.ab===ab)||{}).n||ab;
 const HIDE=new Set(["nfl"]);
-function liveSports(){return Object.keys(SP).filter(k=>!HIDE.has(k)&&G.some(g=>g.sp===k&&!g.leg&&!(lock(g)&&!LIVE[g.id]&&Date.now()-g.ts>36e5*4)))}
+/* the competitions always in the menu, games or not (a section with no fixtures says when its next round is) */
+const PERM=["nba","epl","ucl","fac","lgc","uel"];
+function liveSports(){return Object.keys(SP).filter(k=>!HIDE.has(k)&&(PERM.includes(k)||G.some(g=>g.sp===k&&!g.leg&&!(lock(g)&&!LIVE[g.id]&&Date.now()-g.ts>36e5*4))))}
 const uniqLog=lg=>{const s=new Set();return(lg||[]).filter(r=>{const k=r.split("|").slice(0,2).join("|");if(s.has(k))return false;s.add(k);return true}).slice(0,10).map(r=>r.split("|"))};
 function rosTab(g){return[g.a,g.h].map(tm=>{const t=TBY[tm],ps=DATA.pl.filter(p=>TM[p.t]===t).sort((x,y)=>((y.c27||y.a26||{}).min||0)-((x.c27||x.a26||{}).min||0));
  return`<div class="card"><div class="pn">${bd(tm,24)}${tlink(tm)}<small class="tm" style="margin-left:auto">${ps.length} players</small></div>${ps.map(p=>{const a=p.c27;

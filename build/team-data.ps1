@@ -10,7 +10,7 @@ function Fetch([string[]]$urls) {
   $jobs = foreach ($u in ($urls | Select-Object -Unique)) { $ps = [powershell]::Create(); $ps.RunspacePool = $pool
     [void]$ps.AddScript({ param($u) for ($i = 0; $i -lt 3; $i++) { try { $r = Invoke-WebRequest -UseBasicParsing -TimeoutSec 30 $u; return [Text.Encoding]::UTF8.GetString($r.RawContentStream.ToArray()) } catch { Start-Sleep -Milliseconds (500 * ($i + 1)) } }; $null }).AddArgument($u)
     [pscustomobject]@{ u = $u; ps = $ps; h = $ps.BeginInvoke() } }
-  $r = @{}; foreach ($j in $jobs) { $o = $j.ps.EndInvoke($j.h); $r[$j.u] = if ($o.Count) { $o[0] } else { $null }; $j.ps.Dispose() }; $pool.Close(); $r
+  $r = @{}; foreach ($j in $jobs) { $o = $j.ps.EndInvoke($j.h); $r[$j.u] = if ($o.Count) { $o[0] } else { $null }; $j.ps.Dispose() }; $pool.Close(); $pool.Dispose(); $r
 }
 function Js($s) { if ($s) { $s | ConvertFrom-Json } else { $null } }
 function StX($e, $name) { foreach ($s in $e.stats) { if ($s.name -eq $name -or $s.type -eq $name) { return $s } }; $null }

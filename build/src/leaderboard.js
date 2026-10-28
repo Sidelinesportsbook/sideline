@@ -12,7 +12,7 @@ const lbSet=()=>{const s=S.lb||(S.lb={prof:true});s.on=true;delete s.out;if(s.pr
 /* settled-at times: stamped when a bet settles, so period filters use when it was decided, not when it was placed */
 const _settleLB=settleAll;settleAll=function(){const open=S.bets.filter(b=>b.st==="open");_settleLB();let ch=false;
  open.forEach(b=>{if(b.st!=="open"&&!b.sat){b.sat=b.co&&b.co.t||Date.now();ch=true}});if(ch)save()};
-const lbSp=g=>(GM[g]&&GM[g].sp)||((typeof EVM!=="undefined"&&EVM[String(g).slice(1)])||{}).sp||"";
+const lbSp=g=>(String(g).startsWith("fut:")?String(g).split(":")[1]:"")||(GM[g]&&GM[g].sp)||((typeof EVM!=="undefined"&&EVM[String(g).slice(1)])||{}).sp||"";
 const lbEnd=legs=>{const t=legs.map(l=>{const e=typeof EVM!=="undefined"&&EVM[String(l.g).slice(1)];return e&&e.end?Date.parse(e.end):GM[l.g]?GM[l.g].ts+3*36e5:0}).filter(Boolean);return t.length?Math.min(Date.now(),Math.max(...t)):0};
 const myRecs=()=>S.bets.map(b=>LBC.fromBet(b,lbSp,lbEnd));
 /* the public copy: only what's needed to check each bet (no balance, slip, email or password) */
@@ -40,10 +40,10 @@ setInterval(()=>{if(pg==="lb"&&!document.hidden)lbLoad(true)},12e4);
 const LBL={unsub:null,docs:null,A:null,REG:{},at:0,ids:{},seen:0,err:""};
 async function lbBase(){if(LBL.A&&Date.now()-LBL.at<6e5)return;
  const get=f=>fetch(f+"?t="+Date.now(),{cache:"no-store"}).then(x=>{if(!x.ok)throw new Error(f+" "+x.status);return x.json()});
- try{const[a,r]=await Promise.all([get("results-archive.json"),get("lb-reg.json")]);["res","rp","ppd","ev"].forEach(k=>a[k]=a[k]||{});LBL.A=a;LBL.REG=r||{};LBL.at=Date.now()}catch(e){if(!LBL.A)throw e}}
+ try{const[a,r,fr]=await Promise.all([get("results-archive.json"),get("lb-reg.json"),get("futures-results.json").catch(()=>null)]);["res","rp","ppd","ev"].forEach(k=>a[k]=a[k]||{});a.fut=(fr&&fr.res)||{};LBL.A=a;LBL.REG=r||{};LBL.at=Date.now()}catch(e){if(!LBL.A)throw e}}
 async function lbPub(uid){if(LBL.ids[uid])return LBL.ids[uid];const h=await crypto.subtle.digest("SHA-256",new TextEncoder().encode("sideline:"+uid));return LBL.ids[uid]=[...new Uint8Array(h)].map(x=>x.toString(16).padStart(2,"0")).join("").slice(0,16)}
 /* the archive plus finals this page already has from ESPN (finished games only, by ESPN event id, as the server stores them) */
-function lbArch(){const B=LBL.A,A={res:{...B.res},rp:{...B.rp},ppd:{...B.ppd},ev:{...B.ev}};
+function lbArch(){const B=LBL.A,A={res:{...B.res},rp:{...B.rp},ppd:{...B.ppd},ev:{...B.ev},fut:{...(B.fut||{}),...((typeof FUT!=="undefined"&&FUT.res)||{})}};
  const add=gid=>{const m=String(gid)[0]==="e"&&EVM[String(gid).slice(1)];if(!m||!m.iso)return false;if(!A.ev[gid])A.ev[gid]=m.end?{sp:m.sp,iso:m.iso,end:m.end}:{sp:m.sp,iso:m.iso};return true};
  for(const gid in RES){if(A.res[gid]||String(gid)[0]!=="e")continue;const m=EVM[String(gid).slice(1)];if(!m||m.state!=="post"||!add(gid))continue;A.res[gid]=RES[gid];if(RP[gid]&&Object.keys(RP[gid]).length)A.rp[gid]=RP[gid]}
  for(const gid in PPD){if(!A.ppd[gid]&&String(gid)[0]==="e"&&add(gid))A.ppd[gid]=PPD[gid]}
@@ -117,7 +117,7 @@ function lbProfile(id){const d=LB.data,u=d&&d.users.find(x=>x.id===id);if(!u)ret
  const res={w:["WON","won"],l:["LOST","lost"],c:["CASHED OUT",""],r:["REFUNDED",""],v:["VOID",""]};
  $("#lbp").innerHTML=`<div class="mod lbpm" data-lbclose="1"><div class="mc lbpc" role="dialog" aria-label="${esc(dn(u.name))}'s profile"><button class="lbx0" data-lbclose="1" aria-label="Close">×</button>
  <div class="ph"><div class="av">${esc(u.name[0].toUpperCase())}</div><div><div class="lbpn">${esc(dn(u.name))}</div><div class="tm">${hit?`Rank ${hit.rank} of ${R.rows.length} · `:"Not ranked in this view · "}${LB_MET[LB.f.metric]} · ${LB_PER[LB.f.period]}${LB.f.sport!=="all"?" · "+SP[LB.f.sport].n:""}${LB.f.type!=="all"?" · "+LB_TYP[LB.f.type]:""}</div></div></div>
- <div class="sg lbsg">${cell("Net profit",sgn(s.net),s.net>0?"won":s.net<0?"lost":"")}${cell("ROI",lbPct(s.roi,1))}${cell("Win rate",lbPct(s.wr))}${cell("Settled bets",s.settled)}${cell("Won",s.w,"won")}${cell("Lost",s.l,"lost")}${cell("Cashed out",s.c)}${cell("Staked",$$(s.staked))}${cell("Returns",$$(s.ret))}${cell("Average odds",s.avg?f2(s.avg):"–")}${cell("Best win",s.best!==null?"+"+$$(s.best):"–")}${cell("Current streak",lbStreak(s))}${cell("Pending",s.pending)}</div>
+ <div class="sg lbsg">${cell("Net profit",sgn(s.net),s.net>0?"won":s.net<0?"lost":"")}${cell("ROI",lbPct(s.roi,1))}${cell("Win rate",lbPct(s.wr))}${cell("Settled bets",s.settled)}${cell("Won",s.w,"won")}${cell("Lost",s.l,"lost")}${cell("Cashed out",s.c)}${cell("Staked",$$(s.staked))}${cell("Returns",$$(s.ret))}${cell("Average odds",s.avg?f2(s.avg):"–")}${cell("Best win",s.best!==null?"+"+$$(s.best):"–")}${cell("Current streak",lbStreak(s))}${cell("Pending",s.pending)}</div>${u.bad&&u.bad.removed?`<div class="tm note">${u.bad.removed} bet${u.bad.removed===1?" was":"s were"} taken off this player's public record after being placed. Placed bets can't be taken back, so ${u.bad.removed===1?"it still counts":"they still count"}, settled on the official result.</div>`:""}
  <h2>Profit over time</h2>${lbChart(s.series)}
  <h2>By sport</h2><div class="card">${sps.length||mix.settled?sps.map(([n,q])=>brk(n,q)).join("")+(mix.settled?brk("Mixed-sport multis",mix):""):`<div class="tm">No settled bets in this period.</div>`}</div>
  <h2>Singles and multis</h2><div class="card">${brk("Singles",LBC.stats(u.recs,{...pf,type:"single"}))}${brk("Multis",LBC.stats(u.recs,{...pf,type:"multi"}))}</div>
