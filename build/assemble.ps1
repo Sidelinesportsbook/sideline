@@ -31,8 +31,10 @@ $rest = Rep $rest 'gs=G.filter(g=>g.sp===cur&&' 'gs=G.filter(g=>!g.leg&&g.sp===c
 $rest = Rep $rest '$("#games").innerHTML=gs.map(' '$("#games").innerHTML=plSearch(ql)+(gs.map('
 $rest = Rep $rest '${g.bk?" · bookmaker lines":""}' '${g.bk?" · "+(g.src||"DraftKings")+" line":""}'
 $rest = Rep $rest '.join("")||"<div class=''card''>No upcoming games.</div>"}' '.join("")||"<div class=''card''>No upcoming games.</div>")}'
+# the venue under the kick-off / tip-off time (games.js vnRow)
+$rest = Rep $rest 'let info=`<div class="kv"><span>Kick-off</span><b>${fmt(g.ts)}</b></div>`;' 'let info=`<div class="kv"><span>Kick-off</span><b>${fmt(g.ts)}</b></div>${vnRow(g)}`;'
 # a game with no real price shows no win chances (polish.js shows its no-prices note)
-$rest = Rep $rest '<div class="card"><h2>Win probability</h2>${bar}${info}</div>' '${g.np?"":`<div class="card"><h2>Win probability</h2>${bar}${info}</div>`}'
+$rest = Rep $rest '<div class="card"><h2>Win probability</h2>${bar}${info}</div>' '${g.np?`<div class="card"><div class="kv"><span>Kick-off</span><b>${fmt(g.ts)}</b></div>${vnRow(g)}</div>`:`<div class="card"><h2>Win probability</h2>${bar}${info}</div>`}'
 # a permanent cup tab with no fixtures says so, and points to its futures
 $rest = Rep $rest '||"<div class=''card''>No upcoming games.</div>")}' '||`<div class=''card''>${["fac","lgc","uel"].includes(cur)?`No ${SP[cur].n} matches are scheduled right now. Fixtures appear here as soon as they''re announced; futures for this competition are under Special Bets.`:"No upcoming games."}</div>`)}'
 $rest = Rep $rest 'if(f.inj)INJ=f.inj;if(f.bkp)Object.assign(BKP,f.bkp);' 'if(f.inj&&FEEDAT>Date.parse(DATA.synced))Object.assign(INJ,f.inj);'

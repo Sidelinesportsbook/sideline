@@ -8,6 +8,7 @@ $dataF = Join-Path $PSScriptRoot 'data\sideline-data.json'
 $EB = 'https://site.api.espn.com/apis/site/v2/sports/'
 $LG = [ordered]@{ fac = 'soccer/eng.fa'; lgc = 'soccer/eng.league_cup'; uel = 'soccer/uefa.europa' }
 function Num($x) { $n = 0.0; if ([double]::TryParse([string]$x, [ref]$n)) { [math]::Round($n, 2) } else { 0 } }
+function Venue($c) { $v = $c.venue; if (-not $v -or -not $v.fullName) { return $null }; $loc = @($v.address.city, $(if ($v.address.state) { $v.address.state } else { $v.address.country })) | ? { $_ }; (@($v.fullName) + $loc) -join ', ' }   # where the game is played: 'Stamford Bridge, London, England'
 function Am($o) { if ($o -and $o -ne 'OFF' -and $o -ne 'EVEN') { [int]($o -replace '\+', '') } elseif ($o -eq 'EVEN') { 100 } else { $null } }
 function Fetch([string[]]$urls) {
   $pool = [runspacefactory]::CreateRunspacePool(1, $(if ($env:SL_THREADS) { [int]$env:SL_THREADS } else { 8 })); $pool.Open()
@@ -27,6 +28,7 @@ foreach ($k in $LG.Keys) {
       $c = $ev.competitions[0]; if ($ev.status.type.state -eq 'post') { continue }
       $H = $c.competitors | ? homeAway -eq 'home'; $A = $c.competitors | ? homeAway -eq 'away'
       $g = [ordered]@{ sp = $k; id = $ev.id; h = $H.team.displayName; a = $A.team.displayName; hid = $H.team.id; aid = $A.team.id; iso = $ev.date; st = $ev.status.type.state }
+      $vn = Venue $c; if ($vn) { $g.vn = $vn }
       $o = @($c.odds)[0]
       if ($o -and $o.moneyline) { $ln = [ordered]@{ src = $o.provider.name }
         $mh = Am $o.moneyline.home.close.odds; $ma = Am $o.moneyline.away.close.odds; if ($mh -and $ma) { $ln.ml = @($mh, $ma) }
@@ -45,7 +47,13 @@ foreach ($k in $new.Keys) { foreach ($g in $new[$k]) { $raw = $pr[$pu[$g.id]]; i
     $hp = $s.predictor.homeTeam.gameProjection; $ap = $s.predictor.awayTeam.gameProjection
     if ($hp) { $g.ph = [math]::Round((Num $hp) / 100, 3) }; if ($hp -and $ap) { $g.pd = [math]::Round([math]::Max(0, 1 - (Num $hp) / 100 - (Num $ap) / 100), 3) } } }
 $data = [IO.File]::ReadAllText($dataF) | ConvertFrom-Json
+# venues for the other games already listed (NBA, Premier League, Champions League), so they show between full rebuilds
+$VL = [ordered]@{ nba = 'basketball/nba'; epl = 'soccer/eng.1'; ucl = 'soccer/uefa.champions' }
+$need = @($data.games | ? { $VL.Contains([string]$_.sp) -and -not $_.vn }); $VenueById = @{}
+if ($need.Count) { $vu = @($VL.Keys | % { $k = $_; -1..$Days | % { "$EB$($VL[$k])/scoreboard?dates=$($today.AddDays($_).ToString('yyyyMMdd'))" } }); $vr = Fetch $vu
+  foreach ($u in $vu) { $raw = $vr[$u]; if (-not $raw) { continue }; foreach ($ev in @(($raw | ConvertFrom-Json).events)) { if ($ev) { $vn = Venue $ev.competitions[0]; if ($vn) { $VenueById[[string]$ev.id] = $vn } } } }
+  foreach ($g in $need) { $x = $VenueById[[string]$g.id]; if ($x) { $g | Add-Member -NotePropertyName vn -NotePropertyValue $x -Force } } }
 $keep = @($data.games | ? { -not $ok[[string]$_.sp] }); $add = @($new.Keys | % { $new[$_] } | % { [pscustomobject]$_ })
 $data.games = @($keep + $add)
 [IO.File]::WriteAllText("$dataF.tmp", ($data | ConvertTo-Json -Depth 8 -Compress), [Text.UTF8Encoding]::new($false)); Move-Item -Force "$dataF.tmp" $dataF
-"CUP_FIXTURES " + (($LG.Keys | % { "$_=$(if ($ok[$_]) { $new[$_].Count } else { 'kept' })" }) -join ' ') + " games=$(@($data.games).Count)"
+"CUP_FIXTURES venues+$(@($need | ? vn).Count) " + (($LG.Keys | % { "$_=$(if ($ok[$_]) { $new[$_].Count } else { 'kept' })" }) -join ' ') + " games=$(@($data.games).Count)"

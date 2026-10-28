@@ -2,7 +2,7 @@
 const nbaTot=(h,a)=>{const s=tm=>(P[tm]||[]).map(e=>e[2].pts||0).sort((x,y)=>y-x).slice(0,9).reduce((q,x)=>q+x,0),v=(s(h)+s(a))/.95;return v>170?Math.min(246.5,Math.max(212.5,Math.floor(v)+.5)):228.5};
 function mkG(x,legacy){const sp=x.sp,iso=x.iso,h=SAL0[x.h]||x.h,a=SAL0[x.a]||x.a,c=SP[sp],L=x.ln||{},soc=c.m==="soc";
  const id=legacy?sp+"_"+(h+a).replace(/[^A-Za-z]/g,"").slice(0,20)+"_"+iso.slice(5,10):"e"+x.id;
- const o={id,eid:legacy?null:x.id,sp,h,a,iso,ts:Date.parse(iso),ps:1.91,p:x.ph!=null?x.ph:(soc?.42:.56),pd:soc?(x.pd||.26):0,leg:!!legacy};
+ const o={id,eid:legacy?null:x.id,sp,h,a,iso,ts:Date.parse(iso),vn:x.vn||"",ps:1.91,p:x.ph!=null?x.ph:(soc?.42:.56),pd:soc?(x.pd||.26):0,leg:!!legacy};
  if(!soc){
   if(L.ml){const qh=1/am(L.ml[0]),qa=1/am(L.ml[1]);o.p=qh/(qh+qa);o.oh=r2(am(L.ml[0]));o.oa=r2(am(L.ml[1]));o.bk=1}else{o.oh=od(o.p);o.oa=od(1-o.p)}
   if(L.sp){o.hl=L.sp[0];o.sh=r2(am(L.sp[1]||-110));o.sa=r2(am(L.sp[2]||-110));o.em=-o.hl;o.bk=1}
@@ -45,3 +45,5 @@ function pbPx(g,name,st,s,l){if(!g||!g.pb||!g.pb.pp)return null;const pp=g.pb.pp
 const UCLX=[["Atlético Madrid","Bayern Munich","2026-11-03T20:00Z",32.1,27.1],["Barcelona","Aston Villa","2026-11-03T20:00Z",61.2,22.9],["Bodo/Glimt","Lille OSC","2026-11-03T20:00Z",36.0,28.0],["Feyenoord Rotterdam","Inter Milano","2026-11-03T20:00Z",22.3,24.7],["Galatasaray Istanbul","VfB Stuttgart","2026-11-03T17:45Z",40.8,27.1],["Manchester United","AS Roma","2026-11-03T20:00Z",50.0,25.3],["FC Shakhtar Donetsk","Sporting CP","2026-11-03T17:45Z",30.9,26.8],["LASK Linz","Slovan Bratislava","2026-11-03T20:00Z",54.4,24.4],["Villarreal","Paris Saint-Germain","2026-11-03T20:00Z",19.0,23.8],["AEK Athens","Real Madrid","2026-11-04T17:45Z",6.8,19.6],["Slavia Prague","Arsenal","2026-11-04T20:00Z",9.7,20.8],["Borussia Dortmund","Real Betis Seville","2026-11-04T20:00Z",61.2,22.9],["PSV Eindhoven","Club Brugge","2026-11-04T20:00Z",54.4,24.4],["Racing Club De Lens","Como 1907","2026-11-04T20:00Z",48.5,25.6],["RB Leipzig","Manchester City","2026-11-04T20:00Z",25.9,25.6],["Fenerbahce","Liverpool","2026-11-04T17:45Z",17.9,23.5],["FC Porto","Napoli","2026-11-04T20:00Z",39.2,27.4],["Viking FK","Sabah FK","2026-11-04T20:00Z",47.0,25.9]];
 const UCLX_=DATA.games.some(x=>x.sp==="ucl")?[]:UCLX.map(x=>{const g=mkG({sp:"ucl",id:"ucl"+x[0].replace(/[^A-Za-z]/g,"").slice(0,8)+x[2].slice(5,10),h:x[0],a:x[1],iso:x[2],ph:x[3]/100,pd:x[4]/100});g.eid=null;g.mod=1;return g});
 const G=[...DATA.games.map(x=>mkG(x)),...UCLX_,...LEGACY.map(x=>mkG({sp:x[0],h:x[1],a:x[2],iso:x[3],ph:x[4]/100,pd:(x[5]||0)/100},1))];
+/* where the game is played (ESPN's venue: 'Stamford Bridge, London, England'), under the kick-off / tip-off time */
+function vnRow(g){return g&&g.vn?`<div class="kv"><span>Venue</span><b>${esc(g.vn)}</b></div>`:""}

@@ -41,6 +41,7 @@ $SOCK = 'epl', 'ucl', 'fac', 'lgc', 'uel'   # the soccer competitions (FA Cup, C
 # start a day early: ESPN dates US evening games by the US day, so a game in play can carry "yesterday's" date in UTC terms
 $sbUrls = @{}; foreach ($k in $LG.Keys) { $sbUrls[$k] = @(-1..$Days | % { "$EB$($LG[$k])/scoreboard?dates=$($today.AddDays($_).ToString('yyyyMMdd'))" }) }
 $sb = Get-Many ($sbUrls.Values | % { $_ })
+function Venue($c) { $v = $c.venue; if (-not $v -or -not $v.fullName) { return $null }; $loc = @($v.address.city, $(if ($v.address.state) { $v.address.state } else { $v.address.country })) | ? { $_ }; (@($v.fullName) + $loc) -join ', ' }   # where the game is played: 'Stamford Bridge, London, England'
 function Am($o) { if ($o -and $o -ne 'OFF' -and $o -ne 'EVEN') { [int]($o -replace '\+', '') } elseif ($o -eq 'EVEN') { 100 } else { $null } }
 $games = @(); $seen = @{}
 foreach ($k in $LG.Keys) {
@@ -50,6 +51,7 @@ foreach ($k in $LG.Keys) {
     $c = $ev.competitions[0]; if ($ev.status.type.state -eq 'post') { continue }
     $H = $c.competitors | ? homeAway -eq 'home'; $A = $c.competitors | ? homeAway -eq 'away'
     $g = [ordered]@{ sp = $k; id = $ev.id; h = $H.team.displayName; a = $A.team.displayName; hid = $H.team.id; aid = $A.team.id; iso = $ev.date; st = $ev.status.type.state }
+    $vn = Venue $c; if ($vn) { $g.vn = $vn }
     $o = @($c.odds)[0]
     if ($o -and $o.moneyline) {
       $ln = [ordered]@{ src = $o.provider.name }
