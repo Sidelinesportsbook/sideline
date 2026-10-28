@@ -1,3 +1,5 @@
+/* a competition's badge beside its name (LEAGUE_LOGO is set in polish.js, later in the page: before that, no badge) */
+function lgBadge(sp,z){let u='';try{u=LEAGUE_LOGO[sp]||''}catch(e){}const th=document.documentElement.dataset.theme,dk=th?th==='dark':!matchMedia('(prefers-color-scheme: light)').matches;if(dk)u=u.replace('/leaguelogos/soccer/500/','/leaguelogos/soccer/500-dark/');return u?`<img class="lgb" src="${u}" alt="" width="${z}" height="${z}" loading="lazy">`:''}
 /* ---------- results: live scores, finals and the last 24 hours of games in every league, straight from ESPN ----------
    Every game ESPN reports is tracked, not only games still on the fixture list, so a bet always finds its game.
    Two sources feed the same store: the browser asks ESPN directly (public site), and the shared feed (feed/current, refreshed
@@ -109,7 +111,7 @@ const BLAB={won:"won",lost:"lost",ref:"refunded",void:"void",open:"pending",cash
 function betChips(bs){const c={};bs.forEach(([b])=>{c[b.st]=(c[b.st]||0)+1});return Object.keys(c).map(k=>`<span class="chip c-${k}">${c[k]} ${BLAB[k]||k}</span>`).join("")}
 function pastCard({m,t,ok},bs){const f=finalOf(m)||[m.h.sc,m.a.sc],hw=m.h.sc>m.a.sc,aw=m.a.sc>m.h.sc,first=m.sp==="nba"?["a","h"]:["h","a"];
  const row=k=>{const s=m[k],w=k==="h"?hw:aw;return`<div class="pgt${w?" w":""}">${tmLogo(s,26)}<span class="pgn">${esc(SAL0[s.n]||s.n)}</span><b>${s.sc}</b></div>`};
- return`<button class="pgc" data-pgm="${m.id}"><div class="pgtop"><span>${LGN[m.sp]} · ${esc(m.det||"Final")}</span><span>Ended ${fmt(t)}${ok?"":" (approx.)"}</span></div>${first.map(row).join("")}
+ return`<button class="pgc" data-pgm="${m.id}"><div class="pgtop"><span>${lgBadge(m.sp,14)}${LGN[m.sp]} · ${esc(m.det||"Final")}</span><span>Ended ${fmt(t)}${ok?"":" (approx.)"}</span></div>${first.map(row).join("")}
  ${isAET(m)&&m.reg?`<div class="tm pgs">90 minutes: ${m.reg[0]} – ${m.reg[1]}</div>`:""}<div class="pgbot"><span class="tm">Started ${fmt(m.ts)}</span><span>${betChips(bs)}</span></div></button>`}
 function renderPast(){const el=$("#past");if(!el)return;const now=Date.now(),q=PGF.q.trim().toLowerCase(),ae=document.activeElement,foc=ae&&ae.id==="pgq"?ae.selectionStart:null;
  const rows=pastGames(now).filter(({m})=>(!PGF.sp||m.sp===PGF.sp)&&(!q||[m.h.n,m.a.n,m.h.ab,m.a.ab,SAL0[m.h.n],SAL0[m.a.n]].join(" ").toLowerCase().includes(q)))
@@ -134,7 +136,7 @@ function boxTable(m,box){const ks=Object.keys(box||{});if(!ks.length)return`<div
 function openPast(id){const m=EVM[id];if(!m)return;const e=endAt(m),gid="e"+id,box=RP[gid]||LRP[gid]||{},bs=betsOn(m);
  const row=k=>{const s=m[k],w=k==="h"?m.h.sc>m.a.sc:m.a.sc>m.h.sc;return`<div class="pgt big${w?" w":""}">${tmLogo(s,34)}<span class="pgn">${tlink(SAL0[s.n]||s.n)}</span><b>${s.sc}</b></div>`};
  $("#psw").innerHTML=`<div class="mod sheet" id="pso"><div class="mc ps" role="dialog" aria-label="Game details"><button class="x cls" data-psx="1" aria-label="Close">×</button>
- <div class="tm">${LGN[m.sp]} · ${esc(m.det||"Final")}</div>${(m.sp==="nba"?["a","h"]:["h","a"]).map(row).join("")}
+ <div class="tm">${lgBadge(m.sp,16)}${LGN[m.sp]} · ${esc(m.det||"Final")}</div>${(m.sp==="nba"?["a","h"]:["h","a"]).map(row).join("")}
  ${isAET(m)&&m.reg?`<div class="tm">Score after 90 minutes: ${m.reg[0]} – ${m.reg[1]} (soccer markets settle on this)</div>`:""}
  <div class="kv"><span>Started</span><b>${fmt(m.ts)}</b></div><div class="kv"><span>Finished</span><b>${fmt(e.t)}${e.ok?"":" (approx.)"}</b></div>
  <h2 style="margin-top:16px">${m.sp==="nba"?"Box score":"Player stats"}</h2>${boxTable(m,box)}

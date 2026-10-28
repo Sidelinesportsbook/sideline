@@ -337,12 +337,14 @@ function pitchSvg(S,o){const W=o.w,k=W/68,M=3,H=(52.5+M)*k,X=y=>((100-y)/100*68*
 const pitchLegend=()=>`<div class="scleg"><span><i class="lm n"></i>Goal</span><span><i class="lo"></i>On target</span><span><i class="lt"></i>Blocked</span><span><i class="lx n">✕</i>Off target</span>`;
 
 /* ---------- soccer: player Shot map, Trends and Splits, and the team Analytics tab ----------
-   Source: ESPN's summary of every Premier League and Champions League match this season, read by the cloud refresh
+   Source: ESPN's summary of every Premier League, Champions League, Europa League, FA Cup and Carabao Cup match this season, read by the cloud refresh
    (soc-season.ps1) into pa/s<ESPN athlete id>.json and pa/st<ESPN team id>.json. Minutes are worked out from ESPN's
    substitution times (a starter from 0, a substitute from the minute he came on, to the minute he went off, was sent off
    or 90; stoppage time isn't counted), so minutes and per-90 figures are approximate and labelled that way. Shot distance
    is from the shot's position to the centre of the goal on a 105 × 68 m pitch, so it's approximate too. ESPN publishes no
    expected goals (xG) for these matches, so none is shown. Cup matches aren't in ESPN's feed for this and are left out. */
+/* the competitions in a set of matches, by name, in the order above ("Premier League, FA Cup and Carabao Cup") */
+function scompList(codes){const u=Object.keys(SCOMP).filter(c=>codes.includes(c)).map(c=>SCOMP[c]);return u.length<2?u.join(""):u.slice(0,-1).join(", ")+" and "+u[u.length-1]}
 var SCOMP={"eng.1":"Premier League","uefa.champions":"Champions League","eng.fa":"FA Cup","eng.league_cup":"Carabao Cup","uefa.europa":"Europa League"},SPER=["1–15","16–30","31–45+","46–60","61–75","76–90+","Extra time"];
 const smin=s=>{const m=String(s||"").match(/(\d+)(?:\+(\d+))?/);return m?{b:+m[1],x:+(m[2]||0)}:null};
 const sper=s=>{const t=smin(s);if(!t)return null;const b=t.b;return b>90?6:b<=15?0:b<=30?1:b<=45?2:b<=60?3:b<=75?4:5};
@@ -384,8 +386,8 @@ function sZoneTb(S){const Z={six:"Six-yard box",box:"Rest of the box",out:"Outsi
 var SSTATS=[["g","Goals",11],["sh","Shots",13],["sot","On target",14],["xg","xG",25,1],["a","Assists",12],["xa","xA",26,1],["kp","Chances created",30],["pas","Passes",28],["tk","Tackles won",31],["min","Minutes",24],["fc","Fouls",15],["fs","Fouls won",16],["sv","Saves",19]];
 function socAnalytics(n,p,pt){const d=paGet("s"+p.id,()=>socFallback(p));if(!d)return paSkel();
  if(d.err)return`<div class="cempty">Couldn't load ${esc(n)}'s match data right now. The Overview tab still has the season figures and match log.</div>`;
- const rows=(d.rows||[]).map(r=>r.split("|"));if(!rows.length)return`<div class="cempty">${esc(n)} hasn't played in the Premier League or Champions League this season yet.</div>`;
- const src=d.fb?`read directly from ESPN for the last ${d.fbn} league matches (the full season is on the public site)`:`ESPN match summaries, ${rows.length} Premier League and Champions League match${rows.length===1?"":"es"}, updated ${fmt(Date.parse(d.at))}`;
+ const rows=(d.rows||[]).map(r=>r.split("|"));if(!rows.length)return`<div class="cempty">${esc(n)} hasn't played in the Premier League, Champions League, Europa League or the English cups this season yet.</div>`;
+ const src=d.fb?`read directly from ESPN for the last ${d.fbn} league matches (the full season is on the public site)`:`ESPN match summaries, ${rows.length} match${rows.length===1?"":"es"} (${scompList(rows.map(r=>r[2]))}), updated ${fmt(Date.parse(d.at))}`;
  const st=SHEET.ss||(SHEET.ss={c:"all",g:"all",ha:"all"}),fr=sFilt(rows,st,0,1,5,2),E=new Set(fr.map(r=>r[0])),G={};rows.forEach(r=>G[r[0]]=r);
  if(pt==="sh"){const S=(d.sh||[]).map(sShP).filter(s=>E.has(s.e)),box=fr.reduce((a,r)=>a+ +r[13],0);
   const svg=pitchSvg(S.map(s=>{const r=G[s.e]||[];return{...s,c:"",tip:`${r[1]?fd(gTime(r[1],r[23])):""} ${r[5]==="@"?"@":"vs"} ${r[3]||""} · ${s.mn}' · ${SKW[s.k]||""}${s.pen?" (penalty)":""}${s.hd?" · "+SBW[s.hd]:""}${s.x!=null?" · ~"+Math.round(sDist(s))+" m":""}${xgTip(s)}`}}),{w:Math.min(gbW(),520),label:n+" shot map"});
@@ -413,7 +415,7 @@ function socAnalytics(n,p,pt){const d=paGet("s"+p.id,()=>socFallback(p));if(!d)r
 var TSOC=[["gf","Goals scored",g=>g.gf],["ga","Goals conceded",g=>g.ga],["xg","xG",g=>g.xv(0),1],["xga","xG against",g=>g.xo(0),1],["sh","Shots",g=>g.n(1)],["osh","Shots faced",g=>g.o(1)],["sot","On target",g=>g.n(2)],["pos","Possession %",g=>g.n(0)],["cor","Corners",g=>g.n(4)]];
 function socTeamAnalytics(k){const d=paGet("st"+k.id);if(!d)return paSkel(360);
  if(d.err)return`<div class="cempty">${window.claude&&!window.SL_CLOUD?"Team analytics are on the public site (sidelinesportsbook.github.io/sideline).":"Couldn't load this team's match data right now. Try again in a minute."}</div>`;
- const all=(d.g||[]).map(g=>({...g,t:gTime(g.d,g.iso),res:(g.gf>g.ga?"W ":g.gf<g.ga?"L ":"D ")+g.gf+"-"+g.ga,n:i=>+((g.s||[])[i])||0,o:i=>+((g.os||[])[i])||0,xv:i=>sNum((g.x||[])[i]),xo:i=>sNum((g.ox||[])[i])}));if(!all.length)return`<div class="cempty">No Premier League or Champions League matches yet this season.</div>`;
+ const all=(d.g||[]).map(g=>({...g,t:gTime(g.d,g.iso),res:(g.gf>g.ga?"W ":g.gf<g.ga?"L ":"D ")+g.gf+"-"+g.ga,n:i=>+((g.s||[])[i])||0,o:i=>+((g.os||[])[i])||0,xv:i=>sNum((g.x||[])[i]),xo:i=>sNum((g.ox||[])[i])}));if(!all.length)return`<div class="cempty">No matches yet this season in the Premier League, Champions League, Europa League or the English cups.</div>`;
  const st=SHEET.ts2||(SHEET.ts2={c:"all",g:"all",ha:"all",side:"for"}),cs=[...new Set(all.map(g=>g.c))],gs=all.filter(g=>st.c==="all"||g.c===st.c),n=gs.length,cnt=f=>gs.filter(f).length,pc=x=>n?Math.round(x/n*100)+"%":"–";
  const b=(kk,v,l)=>`<button data-tsf="${kk}:${v}" class="${String(st[kk])===String(v)?"on":""}">${l}</button>`,comp=cs.length>1?`<div class="gbf">${b("c","all","All competitions")}${cs.map(c=>b("c",c,SCOMP[c]||c)).join("")}</div>`:"";
  if(!n)return comp+`<div class="cempty">No matches in this competition yet.</div>`;
@@ -443,7 +445,7 @@ function socTeamAnalytics(k){const d=paGet("st"+k.id);if(!d)return paSkel(360);
  const scorers=top.length?`<h2>Top scorers</h2><div class="card">${top.map(id=>{const nm=plById(id);return`<div class="kv"><span class="bxp">${nm?avatar(nm,id,"soc",22)+`<button class="pnm" data-ply="${esc(nm)}">${esc(nm)}</button>`:"Player "+esc(id)}</span><b>${sc[id].g}${sc[id].p?` <small class="tm">(${sc[id].p} pen)</small>`:""}</b></div>`}).join("")}${GL.some(x=>x.f&&x.k==="og")?`<div class="kv"><span class="tm">Own goals by opponents</span><b>${GL.filter(x=>x.f&&x.k==="og").length}</b></div>`:""}</div>`:"";
  const nx=gOf(k.n),oppN=nx?(nx.h===k.n?nx.a:nx.h):null,ok2=oppN&&teamKey(oppN),h2h=ok2?all.filter(g=>g.oid===String(ok2.id)):[];
  const hh=oppN?`<h2>Head to head · ${esc(oppN)}</h2>${h2h.length?`<div class="card">${h2h.map(g=>`<div class="kv"><span>${fd(g.t)} · ${g.ha==="@"?"@":"vs"} ${esc(g.on)} <small class="tm">${esc(SCOMP[g.c]||"")}</small></span><b class="${g.gf>g.ga?"won":g.gf<g.ga?"lost":""}">${g.res}</b></div>`).join("")}</div>`:`<div class="cempty" style="height:56px">No meetings yet this season.</div>`}`:"";
- return`${comp}<h2>Record</h2>${rec}<h2>Trends</h2>${trend}<h2>When goals come</h2>${pt}${htft?`<h2>Half-time and full-time</h2>${htft}`:""}<h2>Team vs opponents</h2>${cmp}<h2>Shot map</h2>${map}${scorers}${hh}<div class="tm note">Source: ESPN match summaries, Premier League and Champions League (${all.length} matches), updated ${fmt(Date.parse(d.at))}. Cup matches aren't included.</div>`}
+ return`${comp}<h2>Record</h2>${rec}<h2>Trends</h2>${trend}<h2>When goals come</h2>${pt}${htft?`<h2>Half-time and full-time</h2>${htft}`:""}<h2>Team vs opponents</h2>${cmp}<h2>Shot map</h2>${map}${scorers}${hh}<div class="tm note">Source: ESPN match summaries, ${scompList(all.map(g=>g.c))} (${all.length} matches), updated ${fmt(Date.parse(d.at))}.</div>`}
 document.addEventListener("click",e=>{const t=e.target;if(!t||!t.closest||!SHEET)return;
  const a=t.closest("[data-ssf]");if(a){e.stopPropagation();const[k,v]=a.dataset.ssf.split(":");(SHEET.ss=SHEET.ss||{})[k]=v;if(k!=="g"&&SHEET.ss.g!=="5"&&SHEET.ss.g!=="10")SHEET.ss.g="all";openPlayer(SHEET.n);return}
  const b=t.closest("[data-tsf]");if(b){e.stopPropagation();const[k,v]=b.dataset.tsf.split(":");(SHEET.ts2=SHEET.ts2||{})[k]=v;openTeam(SHEET.n,SHEET.tab)}},true);
